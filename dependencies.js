@@ -103,6 +103,36 @@ class Cube extends Shape    // A cube inserts six square strips into its arrays.
     }
 }
 
+window.Cube_Outline = window.classes.Cube_Outline =
+class Cube_Outline extends Shape
+  { constructor()
+      { super( "positions", "colors" ); // Name the values we'll define per each vertex.
+
+        // Specify the edges
+        this.positions.push( ...Vec.cast( [-1,-1,-1], [1,-1,-1], 
+                                          [-1,-1,-1], [-1,-1,1], 
+                                          [-1,-1,-1], [-1,1,-1],  
+                                          [1,-1,1],  [-1,-1,1],
+                                          [1,-1,1], [1,-1,-1], 
+                                          [1,-1,1], [1,1,1], 
+                                          [-1,1,1],  [-1,1,-1],  
+                                          [-1,1,1],  [-1,-1,1],
+                                          [-1,1,1],  [1,1,1],  
+                                          [1,1,-1],  [-1,1,-1], 
+                                          [1,1,-1], [1,-1,-1], 
+                                          [1,1,-1], [1,1,1] ) );
+
+        // Make all edges white                   
+        this.colors.push(   ...Vec.cast( [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1],
+                                         [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1], 
+                                         [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1],
+                                         [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1], [1,1,1,1]) );
+
+
+        this.indexed = false;       // Do this so we won't need to define "this.indices".
+      }
+  }
+
 window.Line_Segment_Array = window.classes.Line_Segment_Array =
 class Line_Segment_Array extends Shape    // Plot 2D points.
 { constructor()
