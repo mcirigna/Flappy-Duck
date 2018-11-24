@@ -40,7 +40,8 @@ class Term_Project extends Scene_Component
                     { 
                       phong: context.get_instance( Phong_Shader ).material( Color.of( 1,1,0,1 ) ), // Parameters: shader, color, ambient, diffusivity, specularity, smoothnes
                       bird: context.get_instance( Phong_Shader ).material( this.basicColors('yellow') ),
-                      pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') )
+                      pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') ),
+                      ground: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/dirt.png")} )
                     }
 
 
@@ -64,6 +65,13 @@ class Term_Project extends Scene_Component
     this.maxHeight = 10
     this.maxWidth = 18
 
+    // Ground
+    this.groundHeight = -(this.maxHeight - 1)
+    this.groundModelTransform = Mat4.identity().times(Mat4.translation( [-(this.maxWidth + 2), this.groundHeight, 0] ) )
+    this.groundXTranslation = 0 // translate ground left by this amount every frame, this is incremented every frame
+    this.groundSpeed = 0.2 // decrement groundXTranslation by this amount at each display
+    this.groundMaxXTranslation = -20 // used to simulate an infinite ground since there is only a finite # of ground cubes
+
     // Bird
     this.birdPositionOriginal = this.birdPosition = Mat4.identity().times(Mat4.rotation(Math.PI/2, [0, 1, 0]))
     this.birdPositionHeight = this.birdPosition[1][3]
@@ -71,7 +79,7 @@ class Term_Project extends Scene_Component
     this.birdSpeed = 0.0
 
     // Pipes
-    this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth, -1 * this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]))
+    this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth, this.groundHeight + 1, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]))
     this.pipePositionUpper = Mat4.identity().times(Mat4.translation([this.maxWidth, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]))
     this.maxPipes = 5
     this.pipes = new Array(this.maxPipes).fill(null).map(()=>new Array(3).fill(null))  // Each element, a pipe, holds [0] = its position (Mat4), 
@@ -83,6 +91,9 @@ class Term_Project extends Scene_Component
       this.pipes[i][3] = 1                        // Initial pipe's height
       this.pipes[i][4] = 'bottom'                 // ALl pipes start at the bottom
     }
+
+    
+
   }
 
 
@@ -352,6 +363,19 @@ class Term_Project extends Scene_Component
     this.movePipes()
     for(var i = 0; i < this.maxPipes; i++)
       this.shapes.cappedCylinder.draw(graphics_state, this.pipes[i][0], this.materials.pipe)
+
+    // Draw Ground
+    for(var i = 0; i < this.maxWidth * 4; i += 2) {
+      let model = this.groundModelTransform.times( Mat4.translation( [i + this.groundXTranslation, 0, 0] ) )
+      this.shapes.cube.draw(graphics_state, model, this.materials.ground)
+    }
+
+    // Simulate an infinite ground 
+    if (this.groundXTranslation < this.groundMaxXTranslation)
+      this.groundXTranslation = -0.2
+    else
+      this.groundXTranslation -= this.groundSpeed
+      
     
 
     // Check for collisions
