@@ -64,12 +64,15 @@ class Term_Project extends Scene_Component
     this.showBoundaries = false // DELETE
     this.maxHeight = 10
     this.maxWidth = 18
+    this.play = false
 
     // Ground
+    this.groundSize = 7
     this.groundHeight = -(this.maxHeight - 1)
     this.groundModelTransform = Mat4.identity().times(Mat4.translation( [-(this.maxWidth + 2), this.groundHeight, 0] ) )
+                                               .times(Mat4.scale( [ this.groundSize, 1, this.groundSize ] ) )
     this.groundXTranslation = 0 // translate ground left by this amount every frame, this is incremented every frame
-    this.groundSpeed = 0.2 // decrement groundXTranslation by this amount at each display
+    this.groundSpeed = 0.1 // decrement groundXTranslation by this amount at each display
     this.groundMaxXTranslation = -20 // used to simulate an infinite ground since there is only a finite # of ground cubes
 
     // Bird
@@ -139,6 +142,7 @@ class Term_Project extends Scene_Component
     this.new_line();
     */
 
+    this.key_triggered_button( "Play",      [ "p" ], () => { this.play = true } );
     this.key_triggered_button( "Jump",            [ "j" ], () => { this.gameOver = false; this.moveBird('jump');  } );
     this.new_line();
     this.key_triggered_button( "Show Boundaries", [ "b" ], () => { this.showBoundaries = !this.showBoundaries } );     // DELETE
@@ -188,7 +192,7 @@ class Term_Project extends Scene_Component
 
 
       case 'gravity':
-        if ( this.birdPositionHeight < this.maxHeight && this.birdPositionHeight > -1 * this.maxHeight)
+        if ( this.birdPositionHeight < this.maxHeight && this.birdPositionHeight > this.groundHeight + 2)
         {
           var offset = 0                      // Meant to increase the acceleration(gravity) as bird approaches max height to make game feel more dynamic
           if (this.birdPositionHeight > -5)
@@ -214,6 +218,7 @@ class Term_Project extends Scene_Component
         this.birdPosition = this.birdPositionOriginal
         this.birdSpeed = 0.0
         this.movePipes('reset')
+        this.play = false
         break;
     }
   
@@ -355,12 +360,12 @@ class Term_Project extends Scene_Component
 
     // Move and Draw Bird
     this.birdPositionHeight = this.birdPosition[1][3] // Bird's Height
-    this.moveBird('gravity')
+    if (this.play) this.moveBird('gravity')
     this.shapes.closedCone.draw(graphics_state, this.birdPosition, this.materials.bird) 
 
 
     // Move and Draw Pipes
-    this.movePipes()
+    if (this.play) this.movePipes()
     for(var i = 0; i < this.maxPipes; i++)
       this.shapes.cappedCylinder.draw(graphics_state, this.pipes[i][0], this.materials.pipe)
 
@@ -371,10 +376,12 @@ class Term_Project extends Scene_Component
     }
 
     // Simulate an infinite ground 
-    if (this.groundXTranslation < this.groundMaxXTranslation)
-      this.groundXTranslation = -0.2
-    else
-      this.groundXTranslation -= this.groundSpeed
+    if (this.play)
+      if (this.groundXTranslation < this.groundMaxXTranslation)
+        this.groundXTranslation = -this.groundSpeed
+      else
+        this.groundXTranslation -= this.groundSpeed
+    
       
     
 
