@@ -41,7 +41,11 @@ class Term_Project extends Scene_Component
                       phong: context.get_instance( Phong_Shader ).material( Color.of( 1,1,0,1 ) ), // Parameters: shader, color, ambient, diffusivity, specularity, smoothnes
                       bird: context.get_instance( Phong_Shader ).material( this.basicColors('yellow') ),
                       pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') ),
-                      ground: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/dirt.png")} )
+                      ground: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/dirt.png")} ),
+                      sky1: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png")} ),
+                      sky2: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sky2.png")} ),
+                      sky1s: context.get_instance( Texture_Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png", true)} )
+                  
                     }
 
 
@@ -413,6 +417,7 @@ class Term_Project extends Scene_Component
                                            .times(Mat4.scale( [ this.groundSize, 1, this.groundSize ] ) )
       this.shapes.cube.draw(graphics_state, model, this.materials.ground)
     }
+    
 
     // Simulate an infinite ground
     if (this.play)
@@ -424,6 +429,48 @@ class Term_Project extends Scene_Component
 
     // Check for collisions
     this.checkCollision()
+
+
+    // Draw sky
+
+    if (this.play){
+      for ( var i = 0; i < 18; i+= 1)
+      {
+        let model_transform = Mat4.identity();
+        model_transform = model_transform.times(Mat4.translation([-270, 0, -7]))
+                                         .times(Mat4.translation([i*30, 0, 0]))
+                                         .times(Mat4.scale([15, 15, .0001]));
+        this.shapes.cube.draw(graphics_state, model_transform, this.materials.sky1s);
+      }
+    }
+    else 
+    {
+      for ( var i = 0; i < 18; i+= 1)
+      {
+        let model_transform = Mat4.identity();
+        model_transform = model_transform.times(Mat4.translation([-270, 0, -7]))
+                                         .times(Mat4.translation([i*30, 0, 0]))
+                                         .times(Mat4.scale([15, 15, .0001]));
+        this.shapes.cube.draw(graphics_state, model_transform, this.materials.sky1);
+      }
+    }
+// for(var i = 0; i < this.maxWidth * 4; i += 2) {
+//       let model = this.groundModelTransform.times( Mat4.translation( [i + this.groundXTranslation,10 , -50] ) )
+//                                            .times(Mat4.scale( [ this.groundSize, this.groundSize, this.groundSize ] ) )
+//       this.shapes.cube.draw(graphics_state, model, this.materials.sky3)
+//     }
+
+
+//     if (this.play)
+//     {
+//       totalSeconds += this.play;
+//       var scrollSpeed = 100;
+// //        var numImages = Math.ceil(canvas.width / img.width) + 1;
+// var xpos = totalSeconds * scrollSpeed % 1358;
+
+//     }
+
+
 
 
     /* REFERENCE
@@ -457,4 +504,34 @@ class Term_Project extends Scene_Component
       this.sounds[ name ].play();
     }
 
+}
+
+
+// Sky Scrolling Background
+
+class Texture_Scroll_X extends Phong_Shader
+{ fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
+    {
+      // TODO:  Modify the shader below (right now it's just the same fragment shader as Phong_Shader) for requirement #6.
+      return `
+        uniform sampler2D texture;
+        void main()
+        { if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.di
+          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.            
+            return;
+          }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
+                                            // Phong shading is not to be confused with the Phong Reflection Model.
+          vec2 mVector = f_tex_coord; 
+          mat4 mMatrix = mat4(vec4(1., 0., 0., 0.), vec4(0., 1., 0., 0.), vec4( 0., 0., 1., 0.), vec4( mod(1. * animation_time, 88.) , 0., 0., 1.)); 
+          vec4 tempVector = vec4(mVector, 0, 0); 
+          tempVector = tempVector + vec4(1., 1., 0., 1.); 
+          tempVector = mMatrix * tempVector; 
+
+          vec4 tex_color = texture2D( texture, tempVector.xy );                         // Sample the texture image in the correct place.
+                                                                                      // Compute an initial (ambient) color:
+          if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
+          else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
+          gl_FragColor.xyz += phong_model_lights( N );                     // Compute the final color with contributions from lights.
+        }`;
+    }
 }
