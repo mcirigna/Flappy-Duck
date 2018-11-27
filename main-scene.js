@@ -45,7 +45,6 @@ class Term_Project extends Scene_Component
                       sky1: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png")} ),
                       sky2: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sky2.png")} ),
                       sky1s: context.get_instance( Texture_Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png", true)} )
-                  
                     }
 
 
