@@ -40,7 +40,8 @@ class Term_Project extends Scene_Component
                     { 
                       phong: context.get_instance( Phong_Shader ).material( Color.of( 1,1,0,1 ) ), // Parameters: shader, color, ambient, diffusivity, specularity, smoothnes
                       bird: context.get_instance( Phong_Shader ).material( this.basicColors('yellow') ),
-                      pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') )
+                      pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') ),
+                      ground: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/dirt.png")} )
                     }
 
 
@@ -51,38 +52,60 @@ class Term_Project extends Scene_Component
     // Available Sounds
     this.sounds = {
                     birdflap: new Audio('assets/birdflap.wav'),
-                    BG: new Audio('assets/BG.mp3')
-                  }
+                    BG: new Audio('assets/BG.mp3'),
+                    bounce: new Audio('assets/bounce.wav'),
+                    crash: new Audio('assets/crash.mp3'),
+                    crashGround: new Audio('assets/crashGround.wav'),
+                    PP: new Audio('assets/pp.wav')
+                  };
 
 
 
     /****************
       Class Variables
     ****************/
-    this.muteMusic = true
-    this.showBoundaries = false // DELETE
-    this.maxHeight = 10
-    this.maxWidth = 18
+    this.onLoad = true;
+    this.showBoundaries = false; // DELETE
+    this.maxHeight = 10;
+    this.maxWidth = 18;
+    this.play = false
 
     // Bird
-    this.birdPositionOriginal = this.birdPosition = Mat4.identity().times(Mat4.rotation(Math.PI/2, [0, 1, 0]))
-    this.birdPositionHeight = this.birdPosition[1][3]
-    this.birdAcceleration = -0.25 / 60
-    this.birdSpeed = 0.0
+    this.birdPositionOriginal = this.birdPosition = Mat4.identity().times(Mat4.rotation(Math.PI/2, [0, 1, 0]));
+    this.birdPositionHeight = this.birdPosition[1][3];
+    this.birdAcceleration = -0.25 / 60;
+    this.birdSpeed = 0.0;
+
+    // Ground
+    this.groundSize = 7
+    this.groundHeight = -(this.maxHeight - 1);
+    this.groundModelTransform = Mat4.identity().times(Mat4.translation( [-(this.maxWidth + 2), this.groundHeight, 0] ) )
+                                               
+    this.groundXTranslation = 0; // translate ground left by this amount every frame, this is incremented every frame
+    this.groundSpeed = 0.2; // decrement groundXTranslation by this amount at each display
+    this.groundMaxXTranslation = -20; // used to simulate an infinite ground since there is only a finite # of ground cubes
 
     // Pipes
-    this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth, -1 * this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]))
-    this.pipePositionUpper = Mat4.identity().times(Mat4.translation([this.maxWidth, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]))
-    this.maxPipes = 5
-    this.pipes = new Array(this.maxPipes).fill(null).map(()=>new Array(3).fill(null))  // Each element, a pipe, holds [0] = its position (Mat4), 
-    for(var i = 0; i < this.maxPipes; i++)                                             // [1] = its speed, [2] = its X coordinate, [3] = its height, [4] = 'top' or 'bottom'
-    {
-      this.pipes[i][0] = this.pipePositionBottom
-      this.pipes[i][1] = 0                        // Initial pipe's speed is 0
-      this.pipes[i][2] = this.pipes[i][0][0][3]   // Pipe's X coordinate
-      this.pipes[i][3] = 1                        // Initial pipe's height
-      this.pipes[i][4] = 'bottom'                 // ALl pipes start at the bottom
-    }
+    this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth, this.groundHeight + 1, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
+    this.pipePositionUpper = Mat4.identity().times(Mat4.translation([this.maxWidth, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
+    this.maxPipes = 6;
+    this.pipes = [];
+    this.distanceTraveled = 0.0;
+    this.pipeSpeed = -5.0; // this is actually the number we divide 1 by to obtain pipe speed, did this to avoid rounding error
+    this.maxPipeHeight = 16
+
+    // old code for pipes below, uncomment if you want to refactor back to a fixed length rather than dynamic length array
+    // this.pipes = new Array(this.maxPipes).fill(null).map(()=>new Array(3).fill(null));  // Each element, a pipe, holds [0] = its position (Mat4),
+//     for(var i = 0; i < this.maxPipes; i++)                                             // [1] = its speed, [2] = its X coordinate, [3] = its height, [4] = 'top' or 'bottom'
+//     {
+//       this.pipes[i][0] = this.pipePositionBottom;
+//       this.pipes[i][1] = 0;                        // Initial pipe's speed is 0
+//       this.pipes[i][2] = this.pipes[i][0][0][3];   // Pipe's X coordinate
+//       this.pipes[i][3] = 1;                        // Initial pipe's height
+//       this.pipes[i][4] = 'bottom';                 // ALl pipes start at the bottom
+//     }
+    
+
   }
 
 
@@ -95,23 +118,23 @@ class Term_Project extends Scene_Component
   basicColors(color, opacity = 1)
   {
     if(opacity < 0.0 || opacity > 1.0)
-      opacity = 1.0
+      opacity = 1.0;
 
     switch (color)
     {
-      case 'red':     return Color.of(1, 0, 0, opacity)
-      case 'green':   return Color.of(0, 1, 0, opacity)
-      case 'blue':    return Color.of(0, 0, 1, opacity)
-      case 'yellow':  return Color.of(1, 1, 0, opacity)
-      case 'cyan':    return Color.of(0, 1, 1, opacity)
-      case 'magenta': return Color.of(1, 0, 1, opacity)
-      case 'gray':    return Color.of(0.5, 0.5, 0.5, opacity)
-      case 'maroon':  return Color.of(0.5, 0, 0, opacity)
-      case 'purple':  return Color.of(0.5, 0, 0.5, opacity)
-      case 'black':   return Color.of(0, 0, 0, opacity)
-      case 'white':   return Color.of(1, 1, 1, opacity)
+      case 'red':     return Color.of(1, 0, 0, opacity);
+      case 'green':   return Color.of(0, 1, 0, opacity);
+      case 'blue':    return Color.of(0, 0, 1, opacity);
+      case 'yellow':  return Color.of(1, 1, 0, opacity);
+      case 'cyan':    return Color.of(0, 1, 1, opacity);
+      case 'magenta': return Color.of(1, 0, 1, opacity);
+      case 'gray':    return Color.of(0.5, 0.5, 0.5, opacity);
+      case 'maroon':  return Color.of(0.5, 0, 0, opacity);
+      case 'purple':  return Color.of(0.5, 0, 0.5, opacity);
+      case 'black':   return Color.of(0, 0, 0, opacity);
+      case 'white':   return Color.of(1, 1, 1, opacity);
 
-      default:      return Color.of(1, 1, 1, 1)
+      default:      return Color.of(1, 1, 1, 1);
     }
   }
 
@@ -127,12 +150,13 @@ class Term_Project extends Scene_Component
     this.key_triggered_button( "Move down",       [ "k" ], () => { this.moveBird('down') } );
     this.new_line();
     */
-
-    this.key_triggered_button( "Jump",            [ "j" ], () => { this.gameOver = false; this.moveBird('jump');  } );
+    this.key_triggered_button( "Jump",            [ "j" ], () => { this.play = true; this.moveBird('jump');  } );
+    this.new_line();
+    this.key_triggered_button( "Play / Pause",    [ "h" ], () => { this.playSound('PP'); this.play = !this.play;  } );
     this.new_line();
     this.key_triggered_button( "Show Boundaries", [ "b" ], () => { this.showBoundaries = !this.showBoundaries } );     // DELETE
     this.new_line()
-    this.key_triggered_button( "Mute Music",      [ "m" ], () => { this.muteMusic = !this.muteMusic } );
+    this.key_triggered_button( "Mute Music",      [ "m" ], () => { this.playSound('BG', undefined, 'mute') } );
 
     /* FOR REFERENCE
     this.key_triggered_button( "Change Colors", [ "c" ], this.set_colors );    // Add a button for controlling the scene.
@@ -177,7 +201,7 @@ class Term_Project extends Scene_Component
 
 
       case 'gravity':
-        if ( this.birdPositionHeight < this.maxHeight && this.birdPositionHeight > -1 * this.maxHeight)
+        if ( this.birdPositionHeight < this.maxHeight && this.birdPositionHeight > this.groundHeight + 2)
         {
           var offset = 0                      // Meant to increase the acceleration(gravity) as bird approaches max height to make game feel more dynamic
           if (this.birdPositionHeight > -5)
@@ -191,10 +215,11 @@ class Term_Project extends Scene_Component
         {
           this.birdSpeed = 0
           this.birdPosition = this.birdPositionOriginal.times(Mat4.translation([0, 9.9, 0]))
+          this.playSound('bounce', 0.2)
         }
 
         else
-          this.moveBird('reset')
+          { this.moveBird('reset'); this.playSound('crashGround', 0.2); }
 
         break;
 
@@ -203,6 +228,7 @@ class Term_Project extends Scene_Component
         this.birdPosition = this.birdPositionOriginal
         this.birdSpeed = 0.0
         this.movePipes('reset')
+        this.play = false
         break;
     }
   
@@ -210,63 +236,103 @@ class Term_Project extends Scene_Component
 
   
 
+  /**************************************************************
+    Generate a pair of pipes and push them to end of pipe array
+  **************************************************************/
+  addPipes()
+  {
+    var pipeHeight = this.getRandInteger(1, this.maxPipeHeight);
+
+    // Bottom pipe
+    this.pipes.push([]);
+    this.pipes[this.pipes.length - 1].push(this.pipePositionBottom.times(Mat4.scale([1, 1, pipeHeight])));
+    this.pipes[this.pipes.length - 1].push(1.0/this.pipeSpeed);                           // Initial pipe's speed is 0
+    this.pipes[this.pipes.length - 1].push(this.pipes[this.pipes.length - 1][0][0][3] + 5);   // Pipe's X coordinate
+    this.pipes[this.pipes.length - 1].push(pipeHeight);                                   // Initial pipe's height
+    this.pipes[this.pipes.length - 1].push('bottom');                                     // ALl pipes start at the bottom
+    
+    // Upper pipe
+    this.pipes.push([]);
+    this.pipes[this.pipes.length - 1].push(this.pipePositionUpper.times(Mat4.scale([1, 1, 23 - pipeHeight])));
+    this.pipes[this.pipes.length - 1].push(1.0/this.pipeSpeed);                           // Initial pipe's speed is 0
+    this.pipes[this.pipes.length - 1].push(this.pipes[this.pipes.length - 1][0][0][3] + 5);   // Pipe's X coordinate
+    this.pipes[this.pipes.length - 1].push(23 - pipeHeight);                              // Initial pipe's height
+    this.pipes[this.pipes.length - 1].push('top');                                        // ALl pipes start at the bottom
+  }
+
+
   /**********************************
     Updates the position of the pipes
   **********************************/
   movePipes(mode = 'normal')
   {
-    // Reset condition
-    if (mode == 'reset')
-    {
-      for(var i = 0; i < this.maxPipes; i++)
-      {
-        this.pipes[i][0] = this.pipePositionBottom
-        this.pipes[i][1] = 0                        // Initial pipe's speed is 0
-        this.pipes[i][2] = this.pipes[i][0][0][3]   // Pipe's X coordinate
-        this.pipes[i][3] = 1                        // Initial pipe's height
-        this.pipes[i][4] = 'bottom'                 // ALl pipes start at the bottom
-      }
+    // Old reset condition for fixed sized pipe array
+//     if (mode == 'reset')
+//     {
+//       for(var i = 0; i < this.maxPipes; i++)
+//       {
+//         this.pipes[i][0] = this.pipePositionBottom
+//         this.pipes[i][1] = 0                        // Initial pipe's speed is 0
+//         this.pipes[i][2] = this.pipes[i][0][0][3]   // Pipe's X coordinate
+//         this.pipes[i][3] = 1                        // Initial pipe's height
+//         this.pipes[i][4] = 'bottom'                 // ALl pipes start at the bottom
+//       }
 
-      return
+//       return
+//     }
+
+    // new reset condition for dynamically sized pipe array
+    if (mode=='reset') { 
+      this.pipes = [];
+      this.distanceTraveled = 0.0;
     }
 
-
     // Pipe's speed
-    var pipeSpeed = -1 * this.getRandInteger(20, 40) / 100        // Normal = -0.25
-
+    this.distanceTraveled += 1.0;
+    if (this.pipes.length < 1) {
+       this.addPipes();
+    }
+    if(Math.abs(this.distanceTraveled % (-60)) < 0.01) {
+       this.addPipes();
+    }
     // For each pipe..
-    for(var i = 0; i < this.maxPipes; i++)
+    var i = 0;
+    while(i < this.pipes.length)
     {      
-      // Set a speed for a pipe if it's speed is 0 
-      if(this.pipes[i][1] == 0) this.pipes[i][1] = pipeSpeed
 
-      // Move the pipes according to each pipe's unique speed
-      this.pipes[i][0] = this.pipes[i][0].times(Mat4.translation([this.pipes[i][1], 0, 0]))
-      this.pipes[i][2] = this.pipes[i][0][0][3]  // Update pipe's X coordinate
-         
+      // Move the pipes
+      this.pipes[i][0] = this.pipes[i][0].times(Mat4.translation([this.pipes[i][1], 0, 0]));
+      this.pipes[i][2] = this.pipes[i][0][0][3];  // Update pipe's X coordinate
       // If the pipe goes out of boundary...
-      if ( this.pipes[i][2] < -1 * this.maxWidth )
+      if ( this.pipes[i][2] < -1 * this.maxWidth - 5)
       {
-        this.pipes[i][1] = pipeSpeed  // Change its assigned speed
+        this.pipes.splice(i, 1);
+
+      // old code for fixed pipe length
+//         this.pipes[i][1] = pipeSpeed ; // Change its assigned speed
         
-        var pipeHeight = this.getRandInteger(1, 20)
+//         var pipeHeight = this.getRandInteger(1, 20);
 
-        // Respawn the pipe randomizing it's location (top or bottom)
-        var chance = this.getRandInteger(0, 100)
-        if (chance < 30)
-        { // Also randomize how far away it respawns, and its height
-          this.pipes[i][0] = this.pipePositionUpper.times(Mat4.translation([this.getRandInteger(10, 50), 0, 0])).times(Mat4.scale([1, 1, pipeHeight]))
-          this.pipes[i][3] = pipeHeight
-          this.pipes[i][4] = 'top'
-        }    
+//         // Respawn the pipe randomizing it's location (top or bottom)
+//         var chance = this.getRandInteger(0, 100);
+//         if (chance < 30)
+//         { // Also randomize how far away it respawns, and its height
+//           this.pipes[i][0] = this.pipePositionUpper.times(Mat4.translation([6 * i, 0, 0])).times(Mat4.scale([1, 1, pipeHeight]));
+//           this.pipes[i][3] = pipeHeight;
+//           this.pipes[i][4] = 'top';
+//         }    
 
-        else
-        {
-          this.pipes[i][0] = this.pipePositionBottom.times(Mat4.translation([this.getRandInteger(10, 50), 0, 0])).times(Mat4.scale([1, 1, pipeHeight]))
-          this.pipes[i][3] = pipeHeight
-          this.pipes[i][4] = 'bottom'
-        }    
+//         else
+//         {
+//           this.pipes[i][0] = this.pipePositionBottom.times(Mat4.translation([6 * i, 0, 0])).times(Mat4.scale([1, 1, pipeHeight]));
+//           this.pipes[i][3] = pipeHeight;
+//           this.pipes[i][4] = 'bottom';
+//         }    
       }
+      else {
+        i += 1;
+      }
+
     }
   }
 
@@ -280,7 +346,7 @@ class Term_Project extends Scene_Component
     var heightMapping = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
 
     // For each pipe..
-    for(var i = 0; i < this.maxPipes; i++)
+    for(var i = 0; i < this.pipes.length; i++)
     { 
       var xCoord = this.pipes[i][2]                  // Get its X coordinate
       var height = Math.round(this.pipes[i][3] / 2)  // Get its height
@@ -291,17 +357,17 @@ class Term_Project extends Scene_Component
         if (topORbottom == 'bottom' && this.birdPositionHeight < 0)
         {
           if (heightMapping[Math.round(Math.abs(this.birdPositionHeight))] <= height)
-            this.moveBird('reset')
+            { this.moveBird('reset'); this.playSound('crash', 0.15); }
         }
 
         else if (topORbottom == 'top' && this.birdPositionHeight > 0)
         {
           if (this.birdPositionHeight >= heightMapping[height])
-            this.moveBird('reset')
+            { this.moveBird('reset'); this.playSound('crash', 0.15); }
         }
 
         else if (height == 10 && this.birdPositionHeight >= -1 && this.birdPositionHeight <= 1 )
-          this.moveBird('reset')
+          { this.moveBird('reset'); this.playSound('crash', 0.15); }
       }
     }
   }
@@ -337,21 +403,40 @@ class Term_Project extends Scene_Component
     }
 
     
-    // Play background music every ~20 seconds
-    if (!this.muteMusic && (Math.round(t) % 20 == 0 || Math.floor(t) == 3))
-      this.playSound("BG", 0.05)
+    // Contains elements to load just once such as music
+    if (this.onLoad)
+    {
+      this.playSound('BG', 0.1, 'play');
+      this.sounds['BG'].loop = true;
+      this.onLoad = false
+    }
 
 
     // Move and Draw Bird
     this.birdPositionHeight = this.birdPosition[1][3] // Bird's Height
-    this.moveBird('gravity')
+    if (this.play) this.moveBird('gravity')
     this.shapes.closedCone.draw(graphics_state, this.birdPosition, this.materials.bird) 
 
 
     // Move and Draw Pipes
-    this.movePipes()
-    for(var i = 0; i < this.maxPipes; i++)
+    if (this.play) this.movePipes()
+    for(var i = 0; i < this.pipes.length; i++)
       this.shapes.cappedCylinder.draw(graphics_state, this.pipes[i][0], this.materials.pipe)
+
+
+    // Draw Ground
+    for(var i = 0; i < this.maxWidth * 4; i += 2) {
+      let model = this.groundModelTransform.times( Mat4.translation( [i + this.groundXTranslation, 0, 0] ) )
+                                           .times(Mat4.scale( [ this.groundSize, 1, this.groundSize ] ) )
+      this.shapes.cube.draw(graphics_state, model, this.materials.ground)
+    }
+
+    // Simulate an infinite ground
+    if (this.play)
+      if (this.groundXTranslation < this.groundMaxXTranslation)
+        this.groundXTranslation = -this.groundSpeed
+      else
+        this.groundXTranslation -= this.groundSpeed
     
 
     // Check for collisions
@@ -382,11 +467,26 @@ class Term_Project extends Scene_Component
 
 
   // Plays the specified sound
-  playSound(name, volume = 1)
-    { if( 0 < this.sounds[ name ].currentTime && this.sounds[ name ].currentTime < .3 ) return;
-      this.sounds[ name ].currentTime = 0;
-      this.sounds[ name ].volume = Math.min(Math.max(volume, 0), 1);;
-      this.sounds[ name ].play();
-    }
+  playSound(name, volume = 1, mode = 'play')
+  { 
+    switch(mode)
+    {
+      case 'play':
+        this.sounds[ name ].currentTime = 0;
+        this.sounds[ name ].volume = Math.min(Math.max(volume, 0), 1);
+        var promise = this.sounds[ name ].play();
+        break;
 
+      case 'pause':
+        this.sounds[ name ].pause()
+        break;
+
+      case 'mute':
+        if (this.sounds[name].muted == undefined)
+          this.sounds[name].muted = false
+        else
+          this.sounds[name].muted = !this.sounds[name].muted    
+        break;
+    }
+  }
 }
