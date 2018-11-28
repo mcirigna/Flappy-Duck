@@ -81,7 +81,7 @@ class Term_Project extends Scene_Component
 
     // Ground
     this.groundSize = 7
-    this.groundHeight = -(this.maxHeight - 1);
+    this.groundHeight = -(this.maxHeight);
     this.groundModelTransform = Mat4.identity().times(Mat4.translation( [-(this.maxWidth + 2), this.groundHeight, 0] ) )
                                                
     this.groundXTranslation = 0; // translate ground left by this amount every frame, this is incremented every frame
@@ -89,15 +89,16 @@ class Term_Project extends Scene_Component
     this.groundMaxXTranslation = -20; // used to simulate an infinite ground since there is only a finite # of ground cubes
 
     // Pipes
-    this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth, this.groundHeight + 1, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
-    this.pipePositionUpper = Mat4.identity().times(Mat4.translation([this.maxWidth, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
-    this.maxPipes = 6;
+    this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth + 5, -(this.maxHeight - 1), 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
+    this.pipePositionUpper = Mat4.identity().times(Mat4.translation([this.maxWidth + 5, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
     this.pipes = [];
     this.distanceTraveled = 0.0;
-    this.pipeSpeed = -5.0; // this is actually the number we divide 1 by to obtain pipe speed, did this to avoid rounding error
-    this.maxPipeHeight = 16
+    this.pipeSpeed = -5.0;    // this is actually the number we divide 1 by to obtain pipe speed, did this to avoid rounding error
+    this.minPipeHeight = 4;   // Both minPipeHeight and maxPipeHeight refer to bottom pipe
+    this.maxPipeHeight = 16;
 
     // old code for pipes below, uncomment if you want to refactor back to a fixed length rather than dynamic length array
+    // this.maxPipes = 6;
     // this.pipes = new Array(this.maxPipes).fill(null).map(()=>new Array(3).fill(null));  // Each element, a pipe, holds [0] = its position (Mat4),
 //     for(var i = 0; i < this.maxPipes; i++)                                             // [1] = its speed, [2] = its X coordinate, [3] = its height, [4] = 'top' or 'bottom'
 //     {
@@ -244,7 +245,8 @@ class Term_Project extends Scene_Component
   **************************************************************/
   addPipes()
   {
-    var pipeHeight = this.getRandInteger(1, this.maxPipeHeight);
+    var pipeHeight = this.getRandInteger(this.minPipeHeight, this.maxPipeHeight);
+    var extraHeight = this.getRandInteger(0, 8);  // Adds variability to how close pipes are to one another
 
     // Bottom pipe
     this.pipes.push([]);
@@ -256,7 +258,7 @@ class Term_Project extends Scene_Component
     
     // Upper pipe
     this.pipes.push([]);
-    this.pipes[this.pipes.length - 1].push(this.pipePositionUpper.times(Mat4.scale([1, 1, 23 - pipeHeight])));
+    this.pipes[this.pipes.length - 1].push(this.pipePositionUpper.times(Mat4.scale([1, 1, (this.maxHeight * 2 + extraHeight) - pipeHeight])));
     this.pipes[this.pipes.length - 1].push(1.0/this.pipeSpeed);                           // Initial pipe's speed is 0
     this.pipes[this.pipes.length - 1].push(this.pipes[this.pipes.length - 1][0][0][3] + 5);   // Pipe's X coordinate
     this.pipes[this.pipes.length - 1].push(23 - pipeHeight);                              // Initial pipe's height
@@ -357,22 +359,20 @@ class Term_Project extends Scene_Component
 
       if (xCoord >= -1 && xCoord <= 1)
       {      
-        if (topORbottom == 'bottom' && this.birdPositionHeight < 0)
+        if (topORbottom == 'bottom')
         {
           if (heightMapping[Math.round(Math.abs(this.birdPositionHeight))] <= height)
-            { this.moveBird('reset'); this.playSound('crash', 0.15); }
+            { this.moveBird('reset'); this.playSound('crash', 0.15); console.log("bottom: ", height, "bird: ", Math.round(Math.abs(this.birdPositionHeight))); }
         }
 
-        else if (topORbottom == 'top' && this.birdPositionHeight > 0)
+        else if (topORbottom == 'top')
         {
           if (this.birdPositionHeight >= heightMapping[height])
-            { this.moveBird('reset'); this.playSound('crash', 0.15); }
+            { this.moveBird('reset'); this.playSound('crash', 0.15); console.log("top: ", heightMapping[height], "bird: ", this.birdPositionHeight); }
         }
-
-        else if (height == 10 && this.birdPositionHeight >= -1 && this.birdPositionHeight <= 1 )
-          { this.moveBird('reset'); this.playSound('crash', 0.15); }
       }
     }
+
   }
 
 
@@ -434,7 +434,6 @@ class Term_Project extends Scene_Component
       this.shapes.cube.draw(graphics_state, model, this.materials.ground)
     }
     
-
     // Simulate an infinite ground
     if (this.play)
       if (this.groundXTranslation < this.groundMaxXTranslation)
@@ -444,7 +443,7 @@ class Term_Project extends Scene_Component
     
 
     // Check for collisions
-    this.checkCollision()
+    //this.checkCollision()
 
 
     // Draw sky
@@ -529,7 +528,7 @@ class Term_Project extends Scene_Component
 
       case 'mute':
         if (this.sounds[name].muted == undefined)
-          this.sounds[name].muted = false
+          this.sounds[name].muted = true
         else
           this.sounds[name].muted = !this.sounds[name].muted    
         break;
@@ -538,8 +537,9 @@ class Term_Project extends Scene_Component
 }
 
 
-// Sky Scrolling Background
 
+
+// Sky Scrolling Background
 class Texture_Scroll_X extends Phong_Shader
 { fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
     {
@@ -553,7 +553,7 @@ class Texture_Scroll_X extends Phong_Shader
           }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
                                             // Phong shading is not to be confused with the Phong Reflection Model.
           vec2 mVector = f_tex_coord; 
-          mat4 mMatrix = mat4(vec4(1., 0., 0., 0.), vec4(0., 1., 0., 0.), vec4( 0., 0., 1., 0.), vec4( mod(1. * animation_time, 88.) , 0., 0., 1.)); 
+          mat4 mMatrix = mat4(vec4(1., 0., 0., 0.), vec4(0., 1., 0., 0.), vec4( 0., 0., 1., 0.), vec4( mod(0.4 * animation_time, 88.) , 0., 0., 1.)); 
           vec4 tempVector = vec4(mVector, 0, 0); 
           tempVector = tempVector + vec4(1., 1., 0., 1.); 
           tempVector = mMatrix * tempVector; 
