@@ -30,7 +30,8 @@ class Term_Project extends Scene_Component
                       closedCone:     new Closed_Cone(30, 30),
                       cappedCylinder: new Capped_Cylinder(30, 30),
                       roundedCylinder:new Rounded_Capped_Cylinder(30, 30),
-                      axis:           new Axis_Arrows()  
+                      axis:           new Axis_Arrows(),
+                      text:           new Text_Line( 8 )
                    }
     this.submit_shapes( context, shapes );
 
@@ -44,7 +45,8 @@ class Term_Project extends Scene_Component
                       ground: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.png")} ),
                       sky1: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png")} ),
                       sky2: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sky2.png")} ),
-                      sky1s: context.get_instance( Texture_Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png", true)} )
+                      sky1s: context.get_instance( Texture_Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png", true)} ),
+                      text_image: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), { ambient: 1, diffusivity: 0, specularity: 0 } )
                     }
 
 
@@ -72,6 +74,10 @@ class Term_Project extends Scene_Component
     this.maxHeight = 10;
     this.maxWidth = 18;
     this.play = false
+
+    // Score
+    this.score = 0
+    this.score_model_transform = Mat4.identity().times(Mat4.translation([-16,7,1]))
 
     // Bird
     this.birdPositionOriginal = this.birdPosition = Mat4.identity().times(Mat4.rotation(Math.PI/2, [0, 1, 0]));
@@ -386,6 +392,9 @@ class Term_Project extends Scene_Component
     const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
     const FPS = 1 / dt  // Frames per second
     
+    // Draw Score
+    this.shapes.text.set_string( "Score." );
+    this.shapes.text.draw(graphics_state, this.score_model_transform, this.materials.text_image);
     
     // Draw Bundaries - DELETE
     if (this.showBoundaries)
