@@ -31,8 +31,12 @@ class Term_Project extends Scene_Component
                       cappedCylinder: new Capped_Cylinder(30, 30),
                       roundedCylinder:new Rounded_Capped_Cylinder(30, 30),
                       axis:           new Axis_Arrows(),
-                      text:           new Text_Line(10)
-                   }
+                      text:           new Text_Line(10),
+                      bird:           new Shape_From_File("/assets/bird.obj"),
+                      cloud:          new Shape_From_File("/assets/cloud.obj"),
+                      rock1:          new Shape_From_File("/assets/rock1.obj"),
+                      rock2:          new Shape_From_File("/assets/rock2.obj")
+                   }  
     this.submit_shapes( context, shapes );
 
 
@@ -41,6 +45,8 @@ class Term_Project extends Scene_Component
                     { 
                       phong: context.get_instance( Phong_Shader ).material( Color.of( 1,1,0,1 ) ), // Parameters: shader, color, ambient, diffusivity, specularity, smoothnes
                       bird: context.get_instance( Phong_Shader ).material( this.basicColors('yellow') ),
+                      cloud: context.get_instance( Phong_Shader ).material( this.basicColors('white', 0.5) ),
+                      rock: context.get_instance( Phong_Shader ).material( this.basicColors('brown', 0.9) ),
                       pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') ),
                       dirt: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/dirt.png")} ),
                       grass: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.png")} ),
@@ -144,6 +150,7 @@ class Term_Project extends Scene_Component
       case 'purple':  return Color.of(0.5, 0, 0.5, opacity);
       case 'black':   return Color.of(0, 0, 0, opacity);
       case 'white':   return Color.of(1, 1, 1, opacity);
+      case 'brown':   return Color.of(0.8, 0.52, 0.24, opacity);
 
       default:      return Color.of(1, 1, 1, 1);
     }
@@ -440,7 +447,7 @@ class Term_Project extends Scene_Component
     // Move and Draw Bird
     this.birdPositionHeight = this.birdPosition[1][3] // Bird's Height
     if (this.play) this.moveBird('gravity')
-    this.shapes.closedCone.draw(graphics_state, this.birdPosition, this.materials.bird) 
+    this.shapes.bird.draw(graphics_state, this.birdPosition, this.materials.bird) 
 
 
     // Move and Draw Pipes
@@ -471,6 +478,19 @@ class Term_Project extends Scene_Component
 
     // Check for collisions
     this.checkCollision()
+
+    
+    // Draw Clouds
+    var cloud_position = Mat4.identity().times(Mat4.translation([-2, 8, -4])).times(Mat4.rotation(t, [0, 1, 0])).times(Mat4.scale([3, 6, 5]))
+    this.shapes.cloud.draw(graphics_state, cloud_position, this.materials.cloud)
+
+
+    // Draw Rocks
+    var rock_position = Mat4.identity().times(Mat4.translation([-4, -8, -4])).times(Mat4.scale([2, 2, 2]))
+    this.shapes.rock1.draw(graphics_state, rock_position, this.materials.rock)
+
+    rock_position = Mat4.identity().times(Mat4.translation([4, -8, -4])).times(Mat4.scale([2, 2, 2]))
+    this.shapes.rock2.draw(graphics_state, rock_position, this.materials.rock)
 
 
     // Draw sky
