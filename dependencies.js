@@ -403,7 +403,7 @@ class Main_Pipe extends Shape                       // Combine a tube and two re
       { super( "positions", "normals", "texture_coords" );
         Cylindrical_Tube.insert_transformed_copy_into( this, [ rows, columns, texture_range ] );
         Pipe_Interior.insert_transformed_copy_into( this, [ rows, columns, texture_range ] );} }
-
+        
 window.Pipe_Tip = window.classes.Pipe_Tip =
 class Pipe_Tip extends Shape                       // Combine a tube and two regular polygons to make a closed cylinder.
   { constructor( rows, columns, texture_range )           // Flat shade this to make a prism, where #columns = #sides.

@@ -104,15 +104,20 @@ class Term_Project extends Scene_Component
     this.groundMaxXTranslation = -20; // used to simulate an infinite ground since there is only a finite # of ground cubes
 
     // Pipes
-    this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth + 5, -(this.maxHeight - 1), 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
-    this.pipePositionUpper = Mat4.identity().times(Mat4.translation([this.maxWidth + 5, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
-    this.pipes = [];
+    this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth + 15, -(this.maxHeight - 1), 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
+    this.pipePositionUpper = Mat4.identity().times(Mat4.translation([this.maxWidth + 15, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
+    this.pipes = []; // Each element, a pipe, holds [0] = its position (Mat4), [1] = its speed, [2] = its X coordinate, [3] = its height, [4] = 'top' or 'bottom'
     this.distanceTraveled = 0.0;
     this.pipeSpeed = -5.0;    // this is actually the number we divide 1 by to obtain pipe speed, did this to avoid rounding error
     this.minPipeHeight = 4;   // Both minPipeHeight and maxPipeHeight refer to bottom pipe
     this.maxPipeHeight = 16;
-    
 
+    // Camera
+    this.initialDynamicPosition = [0,   0, 25]
+    this.finalDynamicPosition   = [-10, 5, 10]
+    this.center = this.dynamic = this.initial_camera_location;
+    this.right = Mat4.inverse(Mat4.look_at( Vec.of( 10,0,25 ), Vec.of( 10,0,0 ), Vec.of( 0,1,0 ) ));
+    this.cameraIndex = 0;
   }
 
 
@@ -153,15 +158,11 @@ class Term_Project extends Scene_Component
   **************/
   make_control_panel()
   { 
-    /* Obsolete
-    this.key_triggered_button( "Move up",         [ "i" ], () => { this.moveBird('up') } );
-    this.key_triggered_button( "Move down",       [ "k" ], () => { this.moveBird('down') } );
-    this.new_line();
-    */
-
     this.key_triggered_button( "Jump",            [ "j" ], () => { this.play = true; this.moveBird('jump');  } );
     this.new_line();
     this.key_triggered_button( "Play / Pause",    [ "h" ], () => { this.playSound('PP'); this.play = !this.play;  } );
+    this.new_line()
+    this.key_triggered_button( "Switch Camera",   [ "c" ], () => {this.cameraIndex++; this.attached = () => this.cameraPositions[this.cameraIndex % 3]} );
     this.new_line()
     this.key_triggered_button( "Mute Music",      [ "m" ], () => { this.playSound('BG', undefined, 'mute') } );
     this.new_line()
@@ -264,7 +265,8 @@ class Term_Project extends Scene_Component
     this.pipes[this.pipes.length - 1].push(this.pipes[this.pipes.length - 1][0][0][3] + 5);   // Pipe's X coordinate
     this.pipes[this.pipes.length - 1].push(pipeHeight);                                       // Initial pipe's height
     this.pipes[this.pipes.length - 1].push('bottom'); 
-    this.pipes[this.pipes.length - 1].push(this.pipePositionBottom.times(Mat4.translation([0, 0, -(pipeHeight - 1.0)/2.0])));
+    this.pipes[this.pipes.length - 1].push(this.pipePositionBottom.times(Mat4.translation([0, 0, -(pipeHeight - 1.0)/2.0])));                                         
+    
     // Top pipe
     this.pipes.push([]);
     this.pipes[this.pipes.length - 1].push(this.pipePositionUpper.times(Mat4.scale([1, 1, (this.maxHeight * 2 + extraHeight) - pipeHeight])));
@@ -292,9 +294,11 @@ class Term_Project extends Scene_Component
     if (this.pipes.length < 1) {
        this.addPipes();
     }
+
     if(Math.abs(this.distanceTraveled % (-60)) < 0.01) {
        this.addPipes();
     }
+
     // For each pipe..
     var i = 0;
     while(i < this.pipes.length)
@@ -304,16 +308,18 @@ class Term_Project extends Scene_Component
       this.pipes[i][0] = this.pipes[i][0].times(Mat4.translation([this.pipes[i][1], 0, 0]));
       this.pipes[i][2] = this.pipes[i][0][0][3];  // Update pipe's X coordinate
       this.pipes[i][5] = this.pipes[i][5].times(Mat4.translation([this.pipes[i][1], 0, 0]));
+
       // If the pipe goes out of boundary...
       if ( this.pipes[i][2] < -1 * this.maxWidth - 5)
       {
         this.pipes.splice(i, 1);
       }
+
       else {
         i += 1;
       }
-
     }
+
   }
 
 
@@ -372,25 +378,6 @@ class Term_Project extends Scene_Component
     this.shapes.text.draw(graphics_state, this.score_model_transform, this.materials.text_image);
     
 
-    // Draw Bundaries - DELETE
-    if (this.showBoundaries)
-    {
-      this.shapes.axis.draw( graphics_state, Mat4.identity(), this.materials.phong.override( {color: this.basicColors('cyan', 0.5) }) );
-
-      this.shapes.cube.draw( graphics_state, Mat4.identity().times(Mat4.translation([0, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0])).times(Mat4.scale([1, 1, 0.1])),
-                                                               this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
-
-      this.shapes.cube.draw( graphics_state, Mat4.identity().times(Mat4.translation([0, -1 * this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0])).times(Mat4.scale([1, 1, 0.1])),
-                                                               this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
-
-      this.shapes.cube.draw( graphics_state, Mat4.identity().times(Mat4.translation([this.maxWidth, 0, 0])).times(Mat4.rotation(Math.PI/2, [0, 1, 0])).times(Mat4.scale([1, 1, 0.1])),
-                                                               this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
-
-      this.shapes.cube.draw( graphics_state, Mat4.identity().times(Mat4.translation([-1 * this.maxWidth, 0, 0])).times(Mat4.rotation(Math.PI/2, [0, 1, 0])).times(Mat4.scale([1, 1, 0.1])),
-                                                               this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
-    }
-
-    
     // Contains elements to load just once such as music
     if (this.onLoad)
     {
@@ -452,7 +439,6 @@ class Term_Project extends Scene_Component
 
 
     // Draw sky
-
     if (this.play){
       for ( var i = 0; i < 18; i+= 1)
       {
@@ -493,7 +479,40 @@ class Term_Project extends Scene_Component
     */
 
 
+    // Camera Positions
+    var dynamicX = this.interpolateInt(t, this.initialDynamicPosition[0], this.finalDynamicPosition[0])
+    var dynamicY = this.interpolateInt(t, this.initialDynamicPosition[1], this.finalDynamicPosition[1])
+    var dynamicZ = this.interpolateInt(t, this.initialDynamicPosition[2], this.finalDynamicPosition[2])
+    this.dynamic = Mat4.inverse(Mat4.look_at( Vec.of(dynamicX, dynamicY, dynamicZ ), Vec.of( 0,this.birdPositionHeight/2,0 ), Vec.of( 0,1,0 ) ));
+    this.cameraPositions = [this.center, this.right, this.dynamic];
 
+    // If this.attached is defined (A key/button is pressed)
+    if(this.attached)
+    { 
+      const desired_camera = Mat4.inverse(this.attached());
+      graphics_state.camera_transform = desired_camera.map( (x,i) => Vec.from( graphics_state.camera_transform[i] ).mix( x, 4*dt ) );
+    }
+
+
+    // Draw Bundaries - DELETE
+    if (this.showBoundaries)
+    {
+      this.shapes.axis.draw( graphics_state, Mat4.identity(), this.materials.phong.override( {color: this.basicColors('cyan', 0.5) }) );
+
+      this.shapes.cube.draw( graphics_state, Mat4.identity().times(Mat4.translation([0, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0])).times(Mat4.scale([1, 1, 0.1])),
+                                                               this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
+
+      this.shapes.cube.draw( graphics_state, Mat4.identity().times(Mat4.translation([0, -1 * this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0])).times(Mat4.scale([1, 1, 0.1])),
+                                                               this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
+
+      this.shapes.cube.draw( graphics_state, Mat4.identity().times(Mat4.translation([this.maxWidth, 0, 0])).times(Mat4.rotation(Math.PI/2, [0, 1, 0])).times(Mat4.scale([1, 1, 0.1])),
+                                                               this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
+
+      this.shapes.cube.draw( graphics_state, Mat4.identity().times(Mat4.translation([-1 * this.maxWidth, 0, 0])).times(Mat4.rotation(Math.PI/2, [0, 1, 0])).times(Mat4.scale([1, 1, 0.1])),
+                                                               this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
+    }
+
+    
 
     /* REFERENCE
     // Setup Sun Light
@@ -517,6 +536,17 @@ class Term_Project extends Scene_Component
   getRandInteger(min, max) 
   { return Math.floor(Math.random() * (max - min + 1) ) + min; }
 
+
+  /* Interpolates between two values
+     Interval - Changes the duration between initial and final
+     Strength - Affects the difference between final and initial. High number will result in the average between the two.
+     verticalOffset - Increases initial and final by the same amount */
+  interpolateInt(time, initial, final, interval = 5, strength = 2, verticalOffset = 0.5)
+  {
+    var interpolationFunction = -(Math.cos(Math.PI * time / interval)) / strength + verticalOffset;
+    return initial + interpolationFunction * (final - initial)
+  }
+  
 
   // Plays the specified sound
   playSound(name, volume = 1, mode = 'play')
