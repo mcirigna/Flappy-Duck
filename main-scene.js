@@ -35,7 +35,9 @@ class Term_Project extends Scene_Component
                       bird:           new Shape_From_File("/assets/bird.obj"),
                       cloud:          new Shape_From_File("/assets/cloud.obj"),
                       rock1:          new Shape_From_File("/assets/rock1.obj"),
-                      rock2:          new Shape_From_File("/assets/rock2.obj")
+                      rock2:          new Shape_From_File("/assets/rock2.obj"),
+                      mainPipe:       new Main_Pipe(30, 30),
+                      pipeTip:        new Pipe_Tip(30, 30)
                    }  
     this.submit_shapes( context, shapes );
 
@@ -109,18 +111,6 @@ class Term_Project extends Scene_Component
     this.pipeSpeed = -5.0;    // this is actually the number we divide 1 by to obtain pipe speed, did this to avoid rounding error
     this.minPipeHeight = 4;   // Both minPipeHeight and maxPipeHeight refer to bottom pipe
     this.maxPipeHeight = 16;
-
-    // old code for pipes below, uncomment if you want to refactor back to a fixed length rather than dynamic length array
-    // this.maxPipes = 6;
-    // this.pipes = new Array(this.maxPipes).fill(null).map(()=>new Array(3).fill(null));  // Each element, a pipe, holds [0] = its position (Mat4),
-//     for(var i = 0; i < this.maxPipes; i++)                                             // [1] = its speed, [2] = its X coordinate, [3] = its height, [4] = 'top' or 'bottom'
-//     {
-//       this.pipes[i][0] = this.pipePositionBottom;
-//       this.pipes[i][1] = 0;                        // Initial pipe's speed is 0
-//       this.pipes[i][2] = this.pipes[i][0][0][3];   // Pipe's X coordinate
-//       this.pipes[i][3] = 1;                        // Initial pipe's height
-//       this.pipes[i][4] = 'bottom';                 // ALl pipes start at the bottom
-//     }
     
 
   }
@@ -273,15 +263,16 @@ class Term_Project extends Scene_Component
     this.pipes[this.pipes.length - 1].push(1.0/this.pipeSpeed);                               // Initial pipe's speed is 0
     this.pipes[this.pipes.length - 1].push(this.pipes[this.pipes.length - 1][0][0][3] + 5);   // Pipe's X coordinate
     this.pipes[this.pipes.length - 1].push(pipeHeight);                                       // Initial pipe's height
-    this.pipes[this.pipes.length - 1].push('bottom');                                         
-    
+    this.pipes[this.pipes.length - 1].push('bottom'); 
+    this.pipes[this.pipes.length - 1].push(this.pipePositionBottom.times(Mat4.translation([0, 0, -(pipeHeight - 1.0)/2.0])));
     // Top pipe
     this.pipes.push([]);
     this.pipes[this.pipes.length - 1].push(this.pipePositionUpper.times(Mat4.scale([1, 1, (this.maxHeight * 2 + extraHeight) - pipeHeight])));
     this.pipes[this.pipes.length - 1].push(1.0/this.pipeSpeed);                               // Initial pipe's speed is 0
     this.pipes[this.pipes.length - 1].push(this.pipes[this.pipes.length - 1][0][0][3] + 5);   // Pipe's X coordinate
     this.pipes[this.pipes.length - 1].push((this.maxHeight * 2 + extraHeight) - pipeHeight);  // Initial pipe's height
-    this.pipes[this.pipes.length - 1].push('top'); 
+    this.pipes[this.pipes.length - 1].push('top');
+    this.pipes[this.pipes.length - 1].push(this.pipePositionUpper.times(Mat4.translation([0, 0, ((this.maxHeight * 2 + extraHeight) - pipeHeight - 1.0)/2.0])));
   }
 
 
@@ -290,21 +281,6 @@ class Term_Project extends Scene_Component
   **********************************/
   movePipes(mode = 'normal')
   {
-    /*Old reset condition for fixed sized pipe array
-    if (mode == 'reset')
-    {
-      for(var i = 0; i < this.maxPipes; i++)
-      {
-        this.pipes[i][0] = this.pipePositionBottom
-        this.pipes[i][1] = 0                        // Initial pipe's speed is 0
-        this.pipes[i][2] = this.pipes[i][0][0][3]   // Pipe's X coordinate
-        this.pipes[i][3] = 1                        // Initial pipe's height
-        this.pipes[i][4] = 'bottom'                 // ALl pipes start at the bottom
-      }
-
-      return
-    }*/
-
     // new reset condition for dynamically sized pipe array
     if (mode=='reset') { 
       this.pipes = [];
@@ -327,32 +303,12 @@ class Term_Project extends Scene_Component
       // Move the pipes
       this.pipes[i][0] = this.pipes[i][0].times(Mat4.translation([this.pipes[i][1], 0, 0]));
       this.pipes[i][2] = this.pipes[i][0][0][3];  // Update pipe's X coordinate
+      this.pipes[i][5] = this.pipes[i][5].times(Mat4.translation([this.pipes[i][1], 0, 0]));
       // If the pipe goes out of boundary...
       if ( this.pipes[i][2] < -1 * this.maxWidth - 5)
       {
         this.pipes.splice(i, 1);
       }
-      /*old code for fixed pipe length
-        this.pipes[i][1] = pipeSpeed ; // Change its assigned speed
-        
-        var pipeHeight = this.getRandInteger(1, 20);
-
-        // Respawn the pipe randomizing it's location (top or bottom)
-        var chance = this.getRandInteger(0, 100);
-        if (chance < 30)
-        { // Also randomize how far away it respawns, and its height
-          this.pipes[i][0] = this.pipePositionUpper.times(Mat4.translation([6 * i, 0, 0])).times(Mat4.scale([1, 1, pipeHeight]));
-          this.pipes[i][3] = pipeHeight;
-          this.pipes[i][4] = 'top';
-        }    
-
-        else
-        {
-          this.pipes[i][0] = this.pipePositionBottom.times(Mat4.translation([6 * i, 0, 0])).times(Mat4.scale([1, 1, pipeHeight]));
-          this.pipes[i][3] = pipeHeight;
-          this.pipes[i][4] = 'bottom';
-        }    
-      }*/
       else {
         i += 1;
       }
@@ -452,8 +408,10 @@ class Term_Project extends Scene_Component
 
     // Move and Draw Pipes
     if (this.play) this.movePipes()
-    for(var i = 0; i < this.pipes.length; i++)
-      this.shapes.cappedCylinder.draw(graphics_state, this.pipes[i][0], this.materials.pipe)
+    for(var i = 0; i < this.pipes.length; i++) {
+      this.shapes.mainPipe.draw(graphics_state, this.pipes[i][0], this.materials.pipe)
+      this.shapes.pipeTip.draw(graphics_state, this.pipes[i][5], this.materials.pipe)
+    }
 
 
     // Draw Ground

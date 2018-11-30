@@ -379,9 +379,39 @@ class Regular_2D_Polygon extends Surface_Of_Revolution  // Approximates a flat d
                                    this.normals = this.normals.map( x => Vec.of( 0,0,1 ) );
                                    this.texture_coords.forEach( (x, i, a) => a[i] = this.positions[i].map( x => x/2 + .5 ).slice(0,2) ); } }
 
+window.Ring = window.classes.Ring =
+class Ring extends Surface_Of_Revolution  // Approximates a flat disk / circle
+  { constructor( rows, columns ) { super( rows, columns, Vec.cast( [0.8, 0, 0], [1.2, 0, 0] ) ); 
+                                   this.normals = this.normals.map( x => Vec.of( 0,0,1 ) );
+                                   this.texture_coords.forEach( (x, i, a) => a[i] = this.positions[i].map( x => x/2 + .5 ).slice(0,2) ); } }
+
 window.Cylindrical_Tube = window.classes.Cylindrical_Tube =
 class Cylindrical_Tube extends Surface_Of_Revolution    // An open tube shape with equally sized sections, pointing down Z locally.    
   { constructor( rows, columns, texture_range ) { super( rows, columns, Vec.cast( [1, 0, .5], [1, 0, -.5] ), texture_range ); } }
+
+window.Pipe_Interior = window.classes.Pipe_Interior =
+class Pipe_Interior extends Surface_Of_Revolution    // An open tube shape with equally sized sections, pointing down Z locally.    
+  { constructor( rows, columns, texture_range ) { super( rows, columns, Vec.cast( [0.8, 0, .5], [0.8, 0, -.5] ), texture_range ); } }
+
+window.Pipe_Tip_Exterior = window.classes.Pipe_Tip_Exterior =
+class Pipe_Tip_Exterior extends Surface_Of_Revolution    // An open tube shape with equally sized sections, pointing down Z locally.    
+  { constructor( rows, columns, texture_range ) { super( rows, columns, Vec.cast( [1.2, 0, .5], [1.2, 0, -.5] ), texture_range ); } }
+
+window.Main_Pipe = window.classes.Main_Pipe =
+class Main_Pipe extends Shape                       // Combine a tube and two regular polygons to make a closed cylinder.
+  { constructor( rows, columns, texture_range )           // Flat shade this to make a prism, where #columns = #sides.
+      { super( "positions", "normals", "texture_coords" );
+        Cylindrical_Tube.insert_transformed_copy_into( this, [ rows, columns, texture_range ] );
+        Pipe_Interior.insert_transformed_copy_into( this, [ rows, columns, texture_range ] );} }
+
+window.Pipe_Tip = window.classes.Pipe_Tip =
+class Pipe_Tip extends Shape                       // Combine a tube and two regular polygons to make a closed cylinder.
+  { constructor( rows, columns, texture_range )           // Flat shade this to make a prism, where #columns = #sides.
+      { super( "positions", "normals", "texture_coords" );
+        Pipe_Tip_Exterior.insert_transformed_copy_into( this, [ rows, columns, texture_range ] );
+        Pipe_Interior.insert_transformed_copy_into( this, [ rows, columns, texture_range ] );
+        Ring.insert_transformed_copy_into( this, [ 1, columns ],                                                  Mat4.translation([ 0, 0, .5 ]) );
+        Ring.insert_transformed_copy_into( this, [ 1, columns ], Mat4.rotation( Math.PI, Vec.of(0, 1, 0) ).times( Mat4.translation([ 0, 0, .5 ]) ) ); } }
 
 window.Cone_Tip = window.classes.Cone_Tip =
 class Cone_Tip extends Surface_Of_Revolution        // Note:  Touches the Z axis; squares degenerate into triangles as they sweep around.
