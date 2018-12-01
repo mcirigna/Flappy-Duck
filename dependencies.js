@@ -696,6 +696,7 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
           }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
                                             // Phong shading is not to be confused with the Phong Reflection Model.
           vec4 tex_color = texture2D( texture, f_tex_coord );                         // Sample the texture image in the correct place.
+          if( USE_TEXTURE && tex_color.w < .01 ) discard;
                                                                                       // Compute an initial (ambient) color:
           if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
           else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
