@@ -122,10 +122,14 @@ class Term_Project extends Scene_Component
     // Camera
     this.initialDynamicPosition = [0,   0, 25]
     this.finalDynamicPosition   = [-10, 5, 10]
-    this.behind = Mat4.inverse(Mat4.look_at( Vec.of( -20,5,10 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ));
-    this.center = this.dynamic = this.initial_camera_location;
-    this.right = Mat4.inverse(Mat4.look_at( Vec.of( 10,0,25 ), Vec.of( 10,0,0 ), Vec.of( 0,1,0 ) ));
-    this.cameraIndex = 0;
+    this.dynamic = this.initial_camera_location
+    this.cameraPositions = {
+                            center: this.initial_camera_location,
+                            behind: Mat4.inverse(Mat4.look_at( Vec.of( -20,5,10 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) )),
+                            right: Mat4.inverse(Mat4.look_at( Vec.of( 10,0,25 ), Vec.of( 10,0,0 ), Vec.of( 0,1,0 ) )),
+                            dynamic: this.dynamic
+                           };
+    this.currentCamera = this.cameraPositions.center
   }
 
   reset()
@@ -141,10 +145,33 @@ class Term_Project extends Scene_Component
   {
     this.state = this.states.gameOver
     this.finalScore = this.score
-    this.attached = () => this.center
+    this.currentCamera = this.cameraPositions.center
   }
 
+  switchCamera(position)
+  { 
+    if (this.cameraPositions[position] != undefined)
+      this.currentCamera = this.cameraPositions[position]
+    else 
+      switch (this.currentCamera)
+      {
+       case this.cameraPositions.center:
+        this.currentCamera = this.cameraPositions.behind
+        break
 
+       case this.cameraPositions.behind:
+        this.currentCamera = this.cameraPositions.right
+        break
+
+       case this.cameraPositions.right:
+        this.currentCamera = this.cameraPositions.dynamic
+        break
+
+       default:
+        this.currentCamera = this.cameraPositions.center
+        
+      }
+  }
 
   /**************************************************************
     Returns a chosen color with the specified opacity (0.0 - 1.0)
@@ -195,7 +222,7 @@ class Term_Project extends Scene_Component
                                                                       this.moveBird('jump')
                                                                       break;
 
-                                                                     default:
+                                                                     case this.states.play:
                                                                       this.moveBird('jump')
                                                                    } 
                                                                  } );
@@ -212,7 +239,7 @@ class Term_Project extends Scene_Component
                                                                    } 
                                                           } );
     this.new_line()
-    this.key_triggered_button( "Switch Camera",   [ "c" ], () => { this.cameraIndex++; this.attached = () => this.cameraPositions[this.cameraIndex % this.cameraPositions.length]} );
+    this.key_triggered_button( "Switch Camera",   [ "c" ], () => { this.switchCamera() } );
     this.new_line()
     this.key_triggered_button( "Mute Music",      [ "m" ], () => { this.playSound('BG', undefined, 'mute') } );
     this.new_line()
@@ -416,14 +443,11 @@ class Term_Project extends Scene_Component
     var dynamicY = this.interpolateInt(t, this.initialDynamicPosition[1], this.finalDynamicPosition[1])
     var dynamicZ = this.interpolateInt(t, this.initialDynamicPosition[2], this.finalDynamicPosition[2])
     this.dynamic = Mat4.inverse(Mat4.look_at( Vec.of(dynamicX, dynamicY, dynamicZ ), Vec.of( 0,this.birdPositionHeight/2,0 ), Vec.of( 0,1,0 ) ));
-    this.cameraPositions = [this.center, this.behind, this.right, this.dynamic];
 
-    // If this.attached is defined (A key/button is pressed)
-    if(this.attached)
-    { 
-      const desired_camera = Mat4.inverse(this.attached());
-      graphics_state.camera_transform = desired_camera.map( (x,i) => Vec.from( graphics_state.camera_transform[i] ).mix( x, 4*dt ) );
-    }
+    
+    const desired_camera = Mat4.inverse(this.currentCamera)
+    graphics_state.camera_transform = desired_camera.map( (x,i) => Vec.from( graphics_state.camera_transform[i] ).mix( x, 4*dt ) );
+    
 
     // Draw Sky
     let backWallModelTransform = Mat4.identity().times(Mat4.translation([0,0,-this.backgroundSize]))
@@ -476,13 +500,13 @@ class Term_Project extends Scene_Component
     this.birdPositionHeight = this.birdPosition[1][3] // Bird's Height
     switch (this.state)
     {
-      case this.states.play:
-        if (this.state == this.states.play) this.moveBird('gravity')
-        this.shapes.bird.draw(graphics_state, this.birdPosition, this.materials.bird)
-        break
-
       case this.states.gameOver:
         this.shapes.square.draw(graphics_state, this.birdPosition.times(Mat4.translation([-2,0,0])).times(Mat4.scale([2,2,2])).times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0))), this.materials.collision)
+        break
+
+      default:
+        if (this.state == this.states.play) this.moveBird('gravity')
+        this.shapes.bird.draw(graphics_state, this.birdPosition, this.materials.bird)
         break
     }
     
