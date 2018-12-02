@@ -80,45 +80,32 @@ class Term_Project extends Scene_Component
     /****************
       Class Variables
     ****************/
+    this.states = {
+                      startScreen: 0,
+                      play:        1,
+                      pause:       2,
+                      gameOver:    3
+                     };
     this.onLoad = true;
     this.showBoundaries = false; // DELETE
     this.maxHeight = 10;
     this.maxWidth = 18;
-    this.play = false
-    this.atStartScreen = true
+    this.state = this.states.startScreen
 
-    // Background
+    // Background for Sky
     this.backgroundSize = 500
-    this.background1ModelTransform = Mat4.identity().times(Mat4.translation([0,0,-this.backgroundSize]))
+    this.backWallModelTransform = Mat4.identity().times(Mat4.translation([0,0,-this.backgroundSize]))
                                                     .times(Mat4.scale([this.backgroundSize,this.backgroundSize,1]))
 
-    this.background2ModelTransform = Mat4.identity().times(Mat4.translation([this.backgroundSize,0,0]))
+    this.rightWallModelTransform = Mat4.identity().times(Mat4.translation([this.backgroundSize,0,0]))
                                                     .times(Mat4.scale([1,this.backgroundSize,this.backgroundSize]))
                                                     .times(Mat4.rotation(-Math.PI / 2, Vec.of(0,1,0)))
                   
     // Ground
-    this.groundSize = 7
-    this.groundHeight = -(this.maxHeight);
-    this.groundModelTransform = Mat4.identity().times(Mat4.translation( [-(this.maxWidth + 2), this.groundHeight, 0] ) )
-                                               
-    this.groundXTranslation = 0; // translate ground left by this amount every frame, this is incremented every frame
-    this.groundSpeed = 0.2; // decrement groundXTranslation by this amount at each display
-    this.groundMaxXTranslation = -20; // used to simulate an infinite ground since there is only a finite # of ground cubes
-                                  
-
-    // Grass
-    this.grassModelTransform = Mat4.identity().times(Mat4.translation([0,-(this.maxHeight),0]))
+    this.groundLevel = -this.maxHeight
+    this.groundModelTransform = Mat4.identity().times(Mat4.translation([0,this.groundLevel,0]))
                                                     .times(Mat4.scale([100,1,100]))
                                                     .times(Mat4.rotation(Math.PI / 2, Vec.of(1,0,0)))
-
-                                                    
-
-    // Clouds
-//     this.cloudModelTransform = Mat4.identity().times(Mat4.translation([30, 8, -4]))
-
-//     this.cloudXTranslation = 0; // translate ground left by this amount every frame, this is incremented every frame
-//     this.cloudSpeed = 0.2; // decrement groundXTranslation by this amount at each display
-//     this.cloudMaxXTranslation = -60;
 
     // Score
     this.score = 0.0
@@ -186,9 +173,9 @@ class Term_Project extends Scene_Component
   **************/
   make_control_panel()
   { 
-    this.key_triggered_button( "Jump",            [ "j" ], () => { this.atStartScreen = false; this.play = true; this.moveBird('jump');  } );
+    this.key_triggered_button( "Jump",            [ "j" ], () => { this.state = this.states.play; this.moveBird('jump');  } );
     this.new_line();
-    this.key_triggered_button( "Play / Pause",    [ "h" ], () => { this.atStartScreen = false; this.playSound('PP'); this.play = !this.play;  } );
+    this.key_triggered_button( "Play / Pause",    [ "h" ], () => { this.playSound('PP'); if (this.state == this.state.play) this.state = this.states.pause; else this.state = this.states.play; } );
     this.new_line()
     this.key_triggered_button( "Switch Camera",   [ "c" ], () => { this.cameraIndex++; this.attached = () => this.cameraPositions[this.cameraIndex % this.cameraPositions.length]} );
     this.new_line()
@@ -241,7 +228,7 @@ class Term_Project extends Scene_Component
 
 
       case 'gravity':
-        if ( this.birdPositionHeight < this.maxHeight && this.birdPositionHeight > this.groundHeight + 2)
+        if ( this.birdPositionHeight < this.maxHeight && this.birdPositionHeight > this.groundLevel + 2)
         {
           var offset = 0                      // Meant to increase the acceleration(gravity) as bird approaches max height to make game feel more dynamic
           if (this.birdPositionHeight > -5)
@@ -270,7 +257,7 @@ class Term_Project extends Scene_Component
         this.shapes.text.set_string("Game Over")
         this.score = 0.0
         this.movePipes('reset')
-        this.play = false
+        this.state = this.states.gameOver
         break;
     }
   
@@ -378,7 +365,7 @@ class Term_Project extends Scene_Component
     }
 
     if (this.birdPositionHeight - 0.5 >= bottomPipeHeight && this.birdPositionHeight + 0.5 <= topPipeHeight )
-    { if (this.play) this.score++; }
+    { if (this.state == this.states.play) this.score++; }
       
     else if (bottomPipeHeight != undefined && topPipeHeight != undefined)
     { 
@@ -399,21 +386,19 @@ class Term_Project extends Scene_Component
     const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
     const FPS = 1 / dt  // Frames per second
 
-    // Draw Sky and Grass 
-    this.shapes.square.draw(graphics_state, this.background1ModelTransform, this.materials.background)
-    this.shapes.square.draw(graphics_state, this.background2ModelTransform, this.materials.background)
-    this.shapes.square.draw(graphics_state, this.grassModelTransform, this.materials.realgrass)
+    // Draw Sky and Ground 
+    this.shapes.square.draw(graphics_state, this.backWallModelTransform, this.materials.background)
+    this.shapes.square.draw(graphics_state, this.rightWallModelTransform, this.materials.background)
+    this.shapes.square.draw(graphics_state, this.groundModelTransform, this.materials.realgrass)
     
 
     // Draw Score
     var scoreString = "Score: " + this.score.toString()
-    if (this.atStartScreen)
-    {
+    if (this.state == this.states.startScreen)
       this.shapes.text.set_string( "Flappy Bird" )
-    }
     else
     {
-      if (this.play) this.shapes.text.set_string( scoreString );
+      if (this.state == this.states.play) this.shapes.text.set_string( scoreString );
     }
     
     this.shapes.text.draw(graphics_state, this.score_model_transform, this.materials.text_image);
@@ -430,54 +415,19 @@ class Term_Project extends Scene_Component
 
     // Move and Draw Bird
     this.birdPositionHeight = this.birdPosition[1][3] // Bird's Height
-    if (this.play) this.moveBird('gravity')
+    if (this.state == this.states.play) this.moveBird('gravity')
     this.shapes.bird.draw(graphics_state, this.birdPosition, this.materials.bird) 
 
 
     // Move and Draw Pipes
-    if (this.play) this.movePipes()
+    if (this.state == this.states.play) this.movePipes()
     for(var i = 0; i < this.pipes.length; i++) {
       this.shapes.mainPipe.draw(graphics_state, this.pipes[i][0], this.materials.pipe)
       this.shapes.pipeTip.draw(graphics_state, this.pipes[i][5], this.materials.pipe)
     }
 
-
-    // Draw Ground
-//     for(var i = 0; i < this.maxWidth * 4; i += 2) 
-//     {
-//       let model = this.groundModelTransform.times( Mat4.translation( [i + this.groundXTranslation, 0, 0] ) )
-//                                            .times(Mat4.scale( [ this.groundSize, 1, this.groundSize ] ) )
-
-//       /*if (this.getRandInteger(0, 100) <= 5)
-//         this.shapes.cube.draw(graphics_state, model, this.materials.dirt)
-//       else*/
-//         this.shapes.cube.draw(graphics_state, model, this.materials.grass)
-//     }
-    
-//     // Simulate an infinite ground
-//     if (this.play)
-//       if (this.groundXTranslation < this.groundMaxXTranslation)
-//         this.groundXTranslation = -this.groundSpeed
-//       else
-//         this.groundXTranslation -= this.groundSpeed
-    
-
     // Check for collisions
     this.checkCollision()
-
-    
-    // Draw Clouds
-//     let cloudModel = this.cloudModelTransform.times(Mat4.translation([this.cloudXTranslation,0,0]))
-//                                              .times(Mat4.rotation(2, [0, 1, 0]))
-//                                              .times(Mat4.scale([3, 6, 5]))
-      
-//     this.shapes.cloud.draw(graphics_state, cloudModel, this.materials.cloud)
-
-//     if (this.play)
-//       if (this.cloudXTranslation < this.cloudMaxXTranslation)
-//         this.cloudXTranslation = -this.cloudSpeed
-//       else
-//         this.cloudXTranslation -= this.cloudSpeed
 
 
     // Draw Rocks
@@ -489,7 +439,7 @@ class Term_Project extends Scene_Component
 
 
     // Draw sky
-//     if (this.play){
+//     if (this.state == this.states.play){
 //       for ( var i = 0; i < 18; i+= 1)
 //       {
 //         let model_transform = Mat4.identity();
@@ -518,9 +468,9 @@ class Term_Project extends Scene_Component
         }
 
 
-        if (this.play)
+        if (this.state == this.states.play)
         {
-          totalSeconds += this.play;
+          totalSeconds += this.state == this.states.play;
           var scrollSpeed = 100;
     //        var numImages = Math.ceil(canvas.width / img.width) + 1;
     var xpos = totalSeconds * scrollSpeed % 1358;
