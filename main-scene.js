@@ -116,6 +116,7 @@ class Term_Project extends Scene_Component
     this.birdPositionHeight = this.birdPosition[1][3];
     this.birdAcceleration = -0.25 / 60;
     this.birdSpeed = 0.0;
+    this.collisionAnimationTime = 0
 
     // Pipes
     this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth + 15, -(this.maxHeight - 1), 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
@@ -129,7 +130,7 @@ class Term_Project extends Scene_Component
     // Camera
     this.initialDynamicPosition = [0,   0, 25]
     this.finalDynamicPosition   = [-10, 5, 10]
-    this.dynamic = this.initial_camera_location
+    this.dynamic = Mat4.inverse(Mat4.look_at( Vec.of(0, 0, -15 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ));
     this.cameraPositions = {
                             center: this.initial_camera_location,
                             behind: Mat4.inverse(Mat4.look_at( Vec.of( -20,5,10 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) )),
@@ -432,6 +433,7 @@ class Term_Project extends Scene_Component
     else if (bottomPipeHeight != undefined && topPipeHeight != undefined)
     { 
       this.playSound('crash', 0.15); 
+      this.collisionAnimationTime = 5
       this.endGame() 
     }
 
@@ -464,11 +466,14 @@ class Term_Project extends Scene_Component
     const FPS = 1 / dt  // Frames per second
 
     // Camera Positions
-    var dynamicX = this.interpolateInt(t, this.initialDynamicPosition[0], this.finalDynamicPosition[0])
-    var dynamicY = this.interpolateInt(t, this.initialDynamicPosition[1], this.finalDynamicPosition[1])
-    var dynamicZ = this.interpolateInt(t, this.initialDynamicPosition[2], this.finalDynamicPosition[2])
-    this.dynamic = Mat4.inverse(Mat4.look_at( Vec.of(dynamicX, dynamicY, dynamicZ ), Vec.of( 0,this.birdPositionHeight/2,0 ), Vec.of( 0,1,0 ) ));
-
+    if (this.currentCamera == this.cameraPositions.dynamic)
+    {
+      var dynamicX = this.interpolateInt(t, this.initialDynamicPosition[0], this.finalDynamicPosition[0])
+      var dynamicY = this.interpolateInt(t, this.initialDynamicPosition[1], this.finalDynamicPosition[1])
+      var dynamicZ = this.interpolateInt(t, this.initialDynamicPosition[2], this.finalDynamicPosition[2])
+      this.dynamic = Mat4.inverse(Mat4.look_at( Vec.of(dynamicX, dynamicY, dynamicZ ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ));
+      this.currentCamera = this.cameraPositions["dynamic"] = this.dynamic
+    }
     
     const desired_camera = Mat4.inverse(this.currentCamera)
     graphics_state.camera_transform = desired_camera.map( (x,i) => Vec.from( graphics_state.camera_transform[i] ).mix( x, 4*dt ) );
@@ -493,23 +498,48 @@ class Term_Project extends Scene_Component
     this.shapes.square.draw(graphics_state, groundModelTransform, this.materials.ocean)
 
     // Draw Text 
+    let messageModelTransform = this.currentCamera.times(Mat4.translation([-7,3,-15]))
+
+    switch (this.currentCamera)
+    {
+      case this.cameraPositions.dynamic:
+      case this.cameraPositions.behind:
+        messageModelTransform = this.currentCamera.times(Mat4.translation([this.maxWidth-17,-this.maxHeight+6,-18]))
+                                                  .times(Mat4.scale([0.75,0.75,0.75]))
+        break
+    }
+
     switch (this.state) 
     {
       case this.states.startScreen:
         this.shapes.text.set_string( "Flappy Bird" )
-        this.shapes.text.draw(graphics_state, Mat4.identity().times(Mat4.translation([-7,3,7])), this.materials.text_image)
+        this.shapes.text.draw(graphics_state, messageModelTransform, this.materials.text_image)
         break
       case this.states.gameOver:
-        this.shapes.text.set_string( "Game Over" )
-        this.shapes.text.draw(graphics_state, Mat4.identity().times(Mat4.translation([-6,3,7])), this.materials.text_image)
+        this.shapes.text.set_string( "Game Over!" )
+        this.shapes.text.draw(graphics_state, messageModelTransform, this.materials.text_image)
         break
     }
 
     // Draw ScoreBoard
-    let score_model_transform = Mat4.identity().times(Mat4.translation([-this.maxWidth + 2, this.maxHeight - 2, 2]))
-                                               .times(Mat4.scale([0.75,0.75,0.57]))
+
+    // Static Score Board
+//     let score_model_transform = Mat4.identity().times(Mat4.translation([-this.maxWidth + 2, this.maxHeight - 2, 2]))
+//                                                .times(Mat4.scale([0.75,0.75,0.75]))
+
+    let scoreModelTransfrom = this.currentCamera.times(Mat4.translation([-this.maxWidth+6,this.maxHeight-4,-18]))
+                                                  .times(Mat4.scale([0.75,0.75,0.75]))
+    // Dynamic Scoreboard
+    switch (this.currentCamera)
+    {
+      case this.cameraPositions.dynamic:
+      case this.cameraPositions.behind:
+        scoreModelTransfrom = this.currentCamera.times(Mat4.translation([this.maxWidth-16,-this.maxHeight+4,-18]))
+                                                  .times(Mat4.scale([0.75,0.75,0.75]))
+    }
+
     this.shapes.text.set_string( "Score: " + this.score.toString() ) 
-    this.shapes.text.draw(graphics_state, score_model_transform, this.materials.text_image);
+    this.shapes.text.draw(graphics_state, scoreModelTransfrom, this.materials.text_image);
     
 
     // Contains elements to load just once such as music
@@ -526,7 +556,8 @@ class Term_Project extends Scene_Component
     switch (this.state)
     {
       case this.states.gameOver:
-        this.shapes.square.draw(graphics_state, this.birdPosition.times(Mat4.translation([-2,0,0])).times(Mat4.scale([2,2,2])).times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0))), this.materials.collision)
+        if (this.collisionAnimationTime > 0) this.shapes.square.draw(graphics_state, this.birdPosition.times(Mat4.translation([-2,0,0])).times(Mat4.scale([2,2,2])).times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0))), this.materials.collision)
+        this.collisionAnimationTime--
         break
 
       default:
