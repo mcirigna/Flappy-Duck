@@ -98,7 +98,11 @@ class Term_Project extends Scene_Component
     this.backgroundSize = 500
                   
     // Ground
+    this.groundSize = this.backgroundSize / 5
     this.groundLevel = -this.maxHeight
+
+    // Rocks
+    this.rocks = []
 
     // Score
     this.score = 0.0
@@ -138,6 +142,7 @@ class Term_Project extends Scene_Component
     this.birdPosition = this.birdPositionOriginal
     this.birdSpeed = 0.0
     this.score = 0.0
+    this.rocks.splice(0,this.rocks.length)
     this.movePipes('reset')
   }
 
@@ -226,18 +231,20 @@ class Term_Project extends Scene_Component
                                                                       this.moveBird('jump')
                                                                    } 
                                                                  } );
-    this.new_line();
-    this.key_triggered_button( "Pause",    [ "h" ], () => { this.playSound('PP'); switch (this.state)
-                                                                   {
-                                                                     case this.states.play:
-                                                                      this.state = this.states.pause
-                                                                      break
+//     this.new_line();
+//     this.key_triggered_button( "Pause",    [ "h" ], () => { this.playSound('PP'); switch (this.state)
+//                                                                    {
+//                                                                      case this.states.play:
+//                                                                       this.state = this.states.pause
+//                                                                       break
 
-                                                                     case this.states.pause:
-                                                                      this.state = this.states.play
-                                                                      break;
-                                                                   } 
-                                                          } );
+//                                                                      case this.states.pause:
+//                                                                       this.state = this.states.play
+//                                                                       break;
+//                                                                    } 
+//                                                           } );
+//      Let's just avoid this for now because this is gonna require me to redo how the sky and ground scrolls
+//      Plus, I dont think its that necessary and the original game doesnt have it 
     this.new_line()
     this.key_triggered_button( "Switch Camera",   [ "c" ], () => { this.switchCamera() } );
     this.new_line()
@@ -462,7 +469,7 @@ class Term_Project extends Scene_Component
 
     // Draw Ground
     let groundModelTransform = Mat4.identity().times(Mat4.translation([0,this.groundLevel,0]))
-                                              .times(Mat4.scale([100,1,100]))
+                                              .times(Mat4.scale([this.groundSize,1,this.groundSize]))
                                               .times(Mat4.rotation(Math.PI / 2, Vec.of(1,0,0)))
 
     this.shapes.square.draw(graphics_state, groundModelTransform, this.materials.ocean)
@@ -514,24 +521,41 @@ class Term_Project extends Scene_Component
 
 
     // Move and Draw Pipes
-    if (this.state == this.states.play) this.movePipes()
+    if (this.state != this.states.startScreen) this.movePipes()
     for(var i = 0; i < this.pipes.length; i++) {
       this.shapes.mainPipe.draw(graphics_state, this.pipes[i][0], this.materials.pipe)
       this.shapes.pipeTip.draw(graphics_state, this.pipes[i][5], this.materials.pipe)
     }
 
     // Check for collisions
-    this.checkCollision()
+    if (this.state == this.states.play) this.checkCollision()
 
 
+    // Spawn new rock
+    let rockSize = 4
+    let maxRocks = 15
+    let rockSpawnFrequency = 1000
+    if (this.state == this.states.play && this.getRandInteger(0,rockSpawnFrequency) == 10 && this.rocks.length < maxRocks) // spawn new rock
+    {
+      let y = this.groundLevel + this.getRandInteger(-2,1)
+      let z = this.getRandInteger(-80, -10)
+      let rotation = Mat4.rotation(this.getRandInteger(0, 7), [1,0,0])
+      let model_transform = Mat4.identity().times(Mat4.translation([0,y,z]))
+                                           .times(rotation)
+                                           .times(Mat4.translation([this.groundSize, 0, 0]))
+                                           .times(Mat4.scale([rockSize,rockSize,rockSize]))   
+      this.rocks.push(model_transform)
+      if (this.rocks.length == maxRocks) this.rocks.shift()  // free rocks
+    }
+  
     // Draw Rocks
-    var rock_position = Mat4.identity().times(Mat4.translation([-4, -8, -4])).times(Mat4.scale([2, 2, 2]))
-    this.shapes.rock1.draw(graphics_state, rock_position, this.materials.rock)
-
-    rock_position = Mat4.identity().times(Mat4.translation([4, -8, -4])).times(Mat4.scale([2, 2, 2]))
-    this.shapes.rock2.draw(graphics_state, rock_position, this.materials.rock)
-
-    // Draw Bundaries - DELETE
+    for(var rock = 0; rock < this.rocks.length; rock++)
+    {
+      this.shapes.rock1.draw(graphics_state, this.rocks[rock], this.materials.rock)
+      this.rocks[rock] = this.rocks[rock].times(Mat4.translation([-0.2/rockSize,0,0]))
+    }
+    
+    // Draw Boundaries - DELETE
     if (this.showBoundaries)
     {
       this.shapes.axis.draw( graphics_state, Mat4.identity(), this.materials.phong.override( {color: this.basicColors('cyan', 0.5) }) );
