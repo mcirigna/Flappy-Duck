@@ -103,6 +103,9 @@ class Term_Project extends Scene_Component
 
     // Rocks
     this.rocks = []
+    this.rockSpawnFrequency = 800
+    this.maxRocks = 15
+    this.rockSize = 4
 
     // Score
     this.score = 0.0
@@ -434,6 +437,21 @@ class Term_Project extends Scene_Component
 
   }
 
+  spawnRock()
+  {
+      let spawnSide = 1
+      if (Math.random() > 0.7)
+        spawnSide = -1
+      let y = this.groundLevel + this.getRandInteger(-2,1)
+      let z = this.getRandInteger(-90, -10) * spawnSide
+      let rotation = Mat4.rotation(this.getRandInteger(0, 7), [1,0,0])
+      let model_transform = Mat4.identity().times(Mat4.translation([0,y,z]))
+                                           .times(rotation)
+                                           .times(Mat4.translation([this.groundSize, 0, 0]))
+                                           .times(Mat4.scale([this.rockSize,this.rockSize,this.rockSize]))   
+      this.rocks.push(model_transform)
+      if (this.rocks.length == this.maxRocks) this.rocks.shift()  // free rocks
+  }
 
 
   /********
@@ -517,9 +535,6 @@ class Term_Project extends Scene_Component
         break
     }
     
-     
-
-
     // Move and Draw Pipes
     if (this.state != this.states.startScreen) this.movePipes()
     for(var i = 0; i < this.pipes.length; i++) {
@@ -530,29 +545,14 @@ class Term_Project extends Scene_Component
     // Check for collisions
     if (this.state == this.states.play) this.checkCollision()
 
-
     // Spawn new rock
-    let rockSize = 4
-    let maxRocks = 15
-    let rockSpawnFrequency = 1000
-    if (this.state == this.states.play && this.getRandInteger(0,rockSpawnFrequency) == 10 && this.rocks.length < maxRocks) // spawn new rock
-    {
-      let y = this.groundLevel + this.getRandInteger(-2,1)
-      let z = this.getRandInteger(-80, -10)
-      let rotation = Mat4.rotation(this.getRandInteger(0, 7), [1,0,0])
-      let model_transform = Mat4.identity().times(Mat4.translation([0,y,z]))
-                                           .times(rotation)
-                                           .times(Mat4.translation([this.groundSize, 0, 0]))
-                                           .times(Mat4.scale([rockSize,rockSize,rockSize]))   
-      this.rocks.push(model_transform)
-      if (this.rocks.length == maxRocks) this.rocks.shift()  // free rocks
-    }
-  
+    if (this.state == this.states.play && this.rocks.length < this.maxRocks && this.getRandInteger(0,this.rockSpawnFrequency) == 10) this.spawnRock()
+
     // Draw Rocks
     for(var rock = 0; rock < this.rocks.length; rock++)
     {
       this.shapes.rock1.draw(graphics_state, this.rocks[rock], this.materials.rock)
-      this.rocks[rock] = this.rocks[rock].times(Mat4.translation([-0.2/rockSize,0,0]))
+      this.rocks[rock] = this.rocks[rock].times(Mat4.translation([-0.2/this.rockSize,0,0]))
     }
     
     // Draw Boundaries - DELETE
