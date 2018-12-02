@@ -103,7 +103,7 @@ class Term_Project extends Scene_Component
 
     // Rocks
     this.rocks = []
-    this.rockSpawnFrequency = 800
+    this.rockSpawnFrequency = 700
     this.maxRocks = 15
     this.rockSize = 4
 
