@@ -31,7 +31,7 @@ class Term_Project extends Scene_Component
                       cappedCylinder: new Capped_Cylinder(30, 30),
                       roundedCylinder:new Rounded_Capped_Cylinder(30, 30),
                       axis:           new Axis_Arrows(),
-                      text:           new Text_Line(10),
+                      text:           new Text_Line(24),
                       bird:           new Shape_From_File("/assets/bird.obj"),
                       cloud:          new Shape_From_File("/assets/cloud.obj"),
                       rock1:          new Shape_From_File("/assets/rock1.obj"),
@@ -47,11 +47,13 @@ class Term_Project extends Scene_Component
                     { 
                       phong: context.get_instance( Phong_Shader ).material( Color.of( 1,1,0,1 ) ), // Parameters: shader, color, ambient, diffusivity, specularity, smoothnes
                       bird: context.get_instance( Phong_Shader ).material( this.basicColors('yellow') ),
-                      cloud: context.get_instance( Phong_Shader ).material( this.basicColors('white', 0.5) ),
+                      cloud: context.get_instance( Phong_Shader ).material( this.basicColors('white', 0.5), {ambient: 1, texture: context.get_instance( "assets/sky2.png")} ),
                       rock: context.get_instance( Phong_Shader ).material( this.basicColors('brown', 0.9) ),
                       pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') ),
+                      background: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/seamlessSky.jpg")} ),
                       dirt: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/dirt.png")} ),
                       grass: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.png")} ),
+                      realgrass: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/realgrass.jpg")} ),
                       sky1: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png")} ),
                       sky1s: context.get_instance( Texture_Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png", true)} ),
                       sky2: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sky2.png")} ),
@@ -83,6 +85,40 @@ class Term_Project extends Scene_Component
     this.maxHeight = 10;
     this.maxWidth = 18;
     this.play = false
+    this.atStartScreen = true
+
+    // Background
+    this.backgroundSize = 500
+    this.background1ModelTransform = Mat4.identity().times(Mat4.translation([0,0,-this.backgroundSize]))
+                                                    .times(Mat4.scale([this.backgroundSize,this.backgroundSize,1]))
+
+    this.background2ModelTransform = Mat4.identity().times(Mat4.translation([this.backgroundSize,0,0]))
+                                                    .times(Mat4.scale([1,this.backgroundSize,this.backgroundSize]))
+                                                    .times(Mat4.rotation(-Math.PI / 2, Vec.of(0,1,0)))
+                  
+    // Ground
+    this.groundSize = 7
+    this.groundHeight = -(this.maxHeight);
+    this.groundModelTransform = Mat4.identity().times(Mat4.translation( [-(this.maxWidth + 2), this.groundHeight, 0] ) )
+                                               
+    this.groundXTranslation = 0; // translate ground left by this amount every frame, this is incremented every frame
+    this.groundSpeed = 0.2; // decrement groundXTranslation by this amount at each display
+    this.groundMaxXTranslation = -20; // used to simulate an infinite ground since there is only a finite # of ground cubes
+                                  
+
+    // Grass
+    this.grassModelTransform = Mat4.identity().times(Mat4.translation([0,-(this.maxHeight),0]))
+                                                    .times(Mat4.scale([100,1,100]))
+                                                    .times(Mat4.rotation(Math.PI / 2, Vec.of(1,0,0)))
+
+                                                    
+
+    // Clouds
+//     this.cloudModelTransform = Mat4.identity().times(Mat4.translation([30, 8, -4]))
+
+//     this.cloudXTranslation = 0; // translate ground left by this amount every frame, this is incremented every frame
+//     this.cloudSpeed = 0.2; // decrement groundXTranslation by this amount at each display
+//     this.cloudMaxXTranslation = -60;
 
     // Score
     this.score = 0.0
@@ -93,15 +129,6 @@ class Term_Project extends Scene_Component
     this.birdPositionHeight = this.birdPosition[1][3];
     this.birdAcceleration = -0.25 / 60;
     this.birdSpeed = 0.0;
-
-    // Ground
-    this.groundSize = 7
-    this.groundHeight = -(this.maxHeight);
-    this.groundModelTransform = Mat4.identity().times(Mat4.translation( [-(this.maxWidth + 2), this.groundHeight, 0] ) )
-                                               
-    this.groundXTranslation = 0; // translate ground left by this amount every frame, this is incremented every frame
-    this.groundSpeed = 0.2; // decrement groundXTranslation by this amount at each display
-    this.groundMaxXTranslation = -20; // used to simulate an infinite ground since there is only a finite # of ground cubes
 
     // Pipes
     this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth + 15, -(this.maxHeight - 1), 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
@@ -115,6 +142,7 @@ class Term_Project extends Scene_Component
     // Camera
     this.initialDynamicPosition = [0,   0, 25]
     this.finalDynamicPosition   = [-10, 5, 10]
+    this.behind = Mat4.inverse(Mat4.look_at( Vec.of( -20,0,10 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ));
     this.center = this.dynamic = this.initial_camera_location;
     this.right = Mat4.inverse(Mat4.look_at( Vec.of( 10,0,25 ), Vec.of( 10,0,0 ), Vec.of( 0,1,0 ) ));
     this.cameraIndex = 0;
@@ -158,11 +186,11 @@ class Term_Project extends Scene_Component
   **************/
   make_control_panel()
   { 
-    this.key_triggered_button( "Jump",            [ "j" ], () => { this.play = true; this.moveBird('jump');  } );
+    this.key_triggered_button( "Jump",            [ "j" ], () => { this.atStartScreen = false; this.play = true; this.moveBird('jump');  } );
     this.new_line();
-    this.key_triggered_button( "Play / Pause",    [ "h" ], () => { this.playSound('PP'); this.play = !this.play;  } );
+    this.key_triggered_button( "Play / Pause",    [ "h" ], () => { this.atStartScreen = false; this.playSound('PP'); this.play = !this.play;  } );
     this.new_line()
-    this.key_triggered_button( "Switch Camera",   [ "c" ], () => {this.cameraIndex++; this.attached = () => this.cameraPositions[this.cameraIndex % 3]} );
+    this.key_triggered_button( "Switch Camera",   [ "c" ], () => { this.cameraIndex++; this.attached = () => this.cameraPositions[this.cameraIndex % this.cameraPositions.length]} );
     this.new_line()
     this.key_triggered_button( "Mute Music",      [ "m" ], () => { this.playSound('BG', undefined, 'mute') } );
     this.new_line()
@@ -370,11 +398,24 @@ class Term_Project extends Scene_Component
     graphics_state.lights = this.lights;        // Use the lights stored in this.lights.
     const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
     const FPS = 1 / dt  // Frames per second
+
+    // Draw Sky and Grass 
+    this.shapes.square.draw(graphics_state, this.background1ModelTransform, this.materials.background)
+    this.shapes.square.draw(graphics_state, this.background2ModelTransform, this.materials.background)
+    this.shapes.square.draw(graphics_state, this.grassModelTransform, this.materials.realgrass)
     
 
     // Draw Score
     var scoreString = "Score: " + this.score.toString()
-    if (this.play) this.shapes.text.set_string( scoreString );
+    if (this.atStartScreen)
+    {
+      this.shapes.text.set_string( "Flappy Bird" )
+    }
+    else
+    {
+      if (this.play) this.shapes.text.set_string( scoreString );
+    }
+    
     this.shapes.text.draw(graphics_state, this.score_model_transform, this.materials.text_image);
     
 
@@ -402,23 +443,23 @@ class Term_Project extends Scene_Component
 
 
     // Draw Ground
-    for(var i = 0; i < this.maxWidth * 4; i += 2) 
-    {
-      let model = this.groundModelTransform.times( Mat4.translation( [i + this.groundXTranslation, 0, 0] ) )
-                                           .times(Mat4.scale( [ this.groundSize, 1, this.groundSize ] ) )
+//     for(var i = 0; i < this.maxWidth * 4; i += 2) 
+//     {
+//       let model = this.groundModelTransform.times( Mat4.translation( [i + this.groundXTranslation, 0, 0] ) )
+//                                            .times(Mat4.scale( [ this.groundSize, 1, this.groundSize ] ) )
 
-      /*if (this.getRandInteger(0, 100) <= 5)
-        this.shapes.cube.draw(graphics_state, model, this.materials.dirt)
-      else*/
-        this.shapes.cube.draw(graphics_state, model, this.materials.grass)
-    }
+//       /*if (this.getRandInteger(0, 100) <= 5)
+//         this.shapes.cube.draw(graphics_state, model, this.materials.dirt)
+//       else*/
+//         this.shapes.cube.draw(graphics_state, model, this.materials.grass)
+//     }
     
-    // Simulate an infinite ground
-    if (this.play)
-      if (this.groundXTranslation < this.groundMaxXTranslation)
-        this.groundXTranslation = -this.groundSpeed
-      else
-        this.groundXTranslation -= this.groundSpeed
+//     // Simulate an infinite ground
+//     if (this.play)
+//       if (this.groundXTranslation < this.groundMaxXTranslation)
+//         this.groundXTranslation = -this.groundSpeed
+//       else
+//         this.groundXTranslation -= this.groundSpeed
     
 
     // Check for collisions
@@ -426,8 +467,17 @@ class Term_Project extends Scene_Component
 
     
     // Draw Clouds
-    var cloud_position = Mat4.identity().times(Mat4.translation([-2, 8, -4])).times(Mat4.rotation(t, [0, 1, 0])).times(Mat4.scale([3, 6, 5]))
-    this.shapes.cloud.draw(graphics_state, cloud_position, this.materials.cloud)
+//     let cloudModel = this.cloudModelTransform.times(Mat4.translation([this.cloudXTranslation,0,0]))
+//                                              .times(Mat4.rotation(2, [0, 1, 0]))
+//                                              .times(Mat4.scale([3, 6, 5]))
+      
+//     this.shapes.cloud.draw(graphics_state, cloudModel, this.materials.cloud)
+
+//     if (this.play)
+//       if (this.cloudXTranslation < this.cloudMaxXTranslation)
+//         this.cloudXTranslation = -this.cloudSpeed
+//       else
+//         this.cloudXTranslation -= this.cloudSpeed
 
 
     // Draw Rocks
@@ -439,27 +489,27 @@ class Term_Project extends Scene_Component
 
 
     // Draw sky
-    if (this.play){
-      for ( var i = 0; i < 18; i+= 1)
-      {
-        let model_transform = Mat4.identity();
-        model_transform = model_transform.times(Mat4.translation([-270, 0, -7]))
-                                         .times(Mat4.translation([i*30, 0, 0]))
-                                         .times(Mat4.scale([15, 15, .0001]));
-        this.shapes.square.draw(graphics_state, model_transform, this.materials.sky1s);
-      }
-    }
-    else 
-    {
-      for ( var i = 0; i < 18; i+= 1)
-      {
-        let model_transform = Mat4.identity();
-        model_transform = model_transform.times(Mat4.translation([-270, 0, -7]))
-                                         .times(Mat4.translation([i*30, 0, 0]))
-                                         .times(Mat4.scale([15, 15, .0001]));
-        this.shapes.square.draw(graphics_state, model_transform, this.materials.sky1);
-      }
-    }
+//     if (this.play){
+//       for ( var i = 0; i < 18; i+= 1)
+//       {
+//         let model_transform = Mat4.identity();
+//         model_transform = model_transform.times(Mat4.translation([-270, 0, -7]))
+//                                          .times(Mat4.translation([i*30, 0, 0]))
+//                                          .times(Mat4.scale([15, 15, .0001]));
+//         this.shapes.square.draw(graphics_state, model_transform, this.materials.sky1s);
+//       }
+//     }
+//     else 
+//     {
+//       for ( var i = 0; i < 18; i+= 1)
+//       {
+//         let model_transform = Mat4.identity();
+//         model_transform = model_transform.times(Mat4.translation([-270, 0, -7]))
+//                                          .times(Mat4.translation([i*30, 0, 0]))
+//                                          .times(Mat4.scale([15, 15, .0001]));
+//         this.shapes.square.draw(graphics_state, model_transform, this.materials.sky1);
+//       }
+//     }
     /*
     for(var i = 0; i < this.maxWidth * 4; i += 2) {
           let model = this.groundModelTransform.times( Mat4.translation( [i + this.groundXTranslation,10 , -50] ) )
@@ -484,7 +534,7 @@ class Term_Project extends Scene_Component
     var dynamicY = this.interpolateInt(t, this.initialDynamicPosition[1], this.finalDynamicPosition[1])
     var dynamicZ = this.interpolateInt(t, this.initialDynamicPosition[2], this.finalDynamicPosition[2])
     this.dynamic = Mat4.inverse(Mat4.look_at( Vec.of(dynamicX, dynamicY, dynamicZ ), Vec.of( 0,this.birdPositionHeight/2,0 ), Vec.of( 0,1,0 ) ));
-    this.cameraPositions = [this.center, this.right, this.dynamic];
+    this.cameraPositions = [this.center, this.behind, this.right, this.dynamic];
 
     // If this.attached is defined (A key/button is pressed)
     if(this.attached)
@@ -596,6 +646,47 @@ class Texture_Scroll_X extends Phong_Shader
           tempVector = mMatrix * tempVector; 
 
           vec4 tex_color = texture2D( texture, tempVector.xy );                         // Sample the texture image in the correct place.
+                                                                                      // Compute an initial (ambient) color:
+          if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
+          else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
+          gl_FragColor.xyz += phong_model_lights( N );                     // Compute the final color with contributions from lights.
+        }`;
+    }
+}
+
+class Scroll_X extends Phong_Shader
+{ fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
+    {
+      return `
+        uniform sampler2D texture;
+        void main()
+        { if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.
+          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.            
+            return;
+          }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
+                                            // Phong shading is not to be confused with the Phong Reflection Model.
+          
+          float vx = 0.05 * animation_time;  // !!!This changes the speed!!!
+
+          mat4 translation = mat4(1.0,0.0,0.0,0.0,    //column 1
+                                  0.0,1.0,0.0,0.0,    //column 2
+                                  0.0,0.0,1.0,0.0,    //column 3
+                                   vx,0.0,0.0,1.0 );  //column 4
+          vec4 coord = translation * vec4(f_tex_coord,0.0,1.0);
+          vec2 coordinates;  
+        
+//           if (animation_time > 100.0 )      // After time limit, reset coordinates for better precision
+//           {    
+//             coordinates = vec2(mod(coord[0],1.000001),coord[1]);
+//           } 
+//           else 
+//           {
+//               coordinates = coord.xy;
+//           }
+
+          coordinates = coord.xy;
+
+          vec4 tex_color = texture2D( texture, coordinates );                         // Sample the texture image in the correct place.
                                                                                       // Compute an initial (ambient) color:
           if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
           else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
