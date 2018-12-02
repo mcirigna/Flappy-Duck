@@ -56,6 +56,7 @@ class Term_Project extends Scene_Component
                       grass: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.png")} ),
                       realgrass: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/realgrass.jpg")} ),
                       ocean: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/ocean.jpg")} ),
+                      bumped_ocean: context.get_instance( Scroll_X_Bump ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/ocean.jpg"), texture2: context.get_instance( "assets/ocean.jpg")} ),
                       sky1: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png")} ),
                       sky1s: context.get_instance( Texture_Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png", true)} ),
                       sky2: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sky2.png")} ),
@@ -495,7 +496,7 @@ class Term_Project extends Scene_Component
                                               .times(Mat4.scale([this.groundSize,1,this.groundSize]))
                                               .times(Mat4.rotation(Math.PI / 2, Vec.of(1,0,0)))
 
-    this.shapes.square.draw(graphics_state, groundModelTransform, this.materials.ocean)
+    this.shapes.square.draw(graphics_state, groundModelTransform, this.materials.bumped_ocean)
 
     // Draw Text 
     let messageModelTransform = this.currentCamera.times(Mat4.translation([-7,3,-15]))
@@ -771,6 +772,36 @@ class Scroll_X extends Phong_Shader
           if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
           else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
           gl_FragColor.xyz += phong_model_lights( N );                     // Compute the final color with contributions from lights.
+        }`;
+    }
+}
+
+class Scroll_X_Bump extends Bump_Shader
+{ fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
+    {
+      return `
+        uniform sampler2D texture;
+        void main()
+        { if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.
+          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.            
+            return;
+          }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
+                                            // Phong shading is not to be confused with the Phong Reflection Model.
+          float vx = 0.05 * animation_time;  // !!!This changes the speed!!!
+
+          mat4 translation = mat4(1.0,0.0,0.0,0.0,    //column 1
+                                  0.0,1.0,0.0,0.0,    //column 2
+                                  0.0,0.0,1.0,0.0,    //column 3
+                                   vx,0.0,0.0,1.0 );  //column 4
+          vec4 coord = translation * vec4(f_tex_coord,0.0,1.0);
+          vec2 coordinates;  
+          coordinates = coord.xy;
+
+          vec4 tex_color = texture2D( texture, coordinates );                         // Sample the texture image in the correct place.
+                                                                                      // Compute an initial (ambient) color:
+          vec3 newN = normalize(texture2D( texture2, coordinates ).xyz - 0.5 * vec3(1, 1, 1));                                                             
+          gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz) * ambient, shapeColor.w * tex_color.w );
+          gl_FragColor.xyz = 0.4 * gl_FragColor.xyz + phong_model_lights( newN.xyz, gl_FragColor );                     // Compute the final color with contributions from lights.
         }`;
     }
 }
