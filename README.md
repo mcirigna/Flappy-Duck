@@ -26,6 +26,14 @@ Eddie Huang: Worked on pipe generation and significantly improved pipe design fr
 Instructions
 -------------------
 
+Runs using the same sequence of commands as the assignments. Double click host.bat to run the server, and using Chrome, navigate to localhost:8000.
+
+Controls are listed below: (also seen in the control panel)
+
+(j) jump, also starts game
+(c) switch camera, between side view and back view
+(m) mute music, controls whether music plays or not
+(g) reset, resets to initial state
 
 More Info
 ---------
