@@ -104,7 +104,7 @@ class Term_Project extends Scene_Component
 
     // Rocks
     this.rocks = []
-    this.rockSpawnFrequency = 700
+    this.rockSpawnFrequency = 500
     this.maxRocks = 15
     this.rockSize = 4
 
@@ -120,8 +120,8 @@ class Term_Project extends Scene_Component
     this.collisionAnimationTime = 0
 
     // Pipes
-    this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth + 15, -(this.maxHeight - 1), 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
-    this.pipePositionUpper = Mat4.identity().times(Mat4.translation([this.maxWidth + 15, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
+    this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth + 25, -(this.maxHeight - 1), 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
+    this.pipePositionUpper = Mat4.identity().times(Mat4.translation([this.maxWidth + 25, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
     this.pipes = []; // Each element, a pipe, holds [0] = its position (Mat4), [1] = its speed, [2] = its X coordinate, [3] = its height, [4] = 'top' or 'bottom'
     this.distanceTraveled = 0.0;
     this.pipeSpeed = -5.0;    // this is actually the number we divide 1 by to obtain pipe speed, did this to avoid rounding error
@@ -134,8 +134,8 @@ class Term_Project extends Scene_Component
     this.dynamic = Mat4.inverse(Mat4.look_at( Vec.of(0, 0, -15 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ));
     this.cameraPositions = {
                             center: this.initial_camera_location,
-                            behind: Mat4.inverse(Mat4.look_at( Vec.of( -20,5,10 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) )),
                             right: Mat4.inverse(Mat4.look_at( Vec.of( 10,0,25 ), Vec.of( 10,0,0 ), Vec.of( 0,1,0 ) )),
+                            behind: Mat4.inverse(Mat4.look_at( Vec.of( -20,5,10 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) )),
                             dynamic: this.dynamic
                            };
     this.currentCamera = this.cameraPositions.center
@@ -155,7 +155,7 @@ class Term_Project extends Scene_Component
   {
     this.state = this.states.gameOver
     this.finalScore = this.score
-    this.currentCamera = this.cameraPositions.center
+    //this.currentCamera = this.cameraPositions.center  // Uncomment to reset camera angle at death 
   }
 
   switchCamera(position)
@@ -166,14 +166,14 @@ class Term_Project extends Scene_Component
       switch (this.currentCamera)
       {
        case this.cameraPositions.center:
-        this.currentCamera = this.cameraPositions.behind
-        break
-
-       case this.cameraPositions.behind:
         this.currentCamera = this.cameraPositions.right
         break
 
-       case this.cameraPositions.right:
+      case this.cameraPositions.right:
+        this.currentCamera = this.cameraPositions.behind
+        break
+        
+       case this.cameraPositions.behind:
         this.currentCamera = this.cameraPositions.dynamic
         break
 
