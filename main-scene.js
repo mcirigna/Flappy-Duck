@@ -55,6 +55,7 @@ class Term_Project extends Scene_Component
                       dirt: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/dirt.png")} ),
                       grass: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.png")} ),
                       realgrass: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/realgrass.jpg")} ),
+                      ocean: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/ocean.jpg")} ),
                       sky1: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png")} ),
                       sky1s: context.get_instance( Texture_Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png", true)} ),
                       sky2: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sky2.png")} ),
@@ -121,7 +122,7 @@ class Term_Project extends Scene_Component
     // Camera
     this.initialDynamicPosition = [0,   0, 25]
     this.finalDynamicPosition   = [-10, 5, 10]
-    this.behind = Mat4.inverse(Mat4.look_at( Vec.of( -20,0,10 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ));
+    this.behind = Mat4.inverse(Mat4.look_at( Vec.of( -20,5,10 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ));
     this.center = this.dynamic = this.initial_camera_location;
     this.right = Mat4.inverse(Mat4.look_at( Vec.of( 10,0,25 ), Vec.of( 10,0,0 ), Vec.of( 0,1,0 ) ));
     this.cameraIndex = 0;
@@ -440,7 +441,7 @@ class Term_Project extends Scene_Component
                                               .times(Mat4.scale([100,1,100]))
                                               .times(Mat4.rotation(Math.PI / 2, Vec.of(1,0,0)))
 
-    this.shapes.square.draw(graphics_state, groundModelTransform, this.materials.realgrass)
+    this.shapes.square.draw(graphics_state, groundModelTransform, this.materials.ocean)
 
     // Draw Text 
     switch (this.state) 
