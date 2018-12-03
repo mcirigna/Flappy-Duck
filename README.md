@@ -1,5 +1,5 @@
 
-Title: Flappy Bird
+# Flappy Duck
 ------------------
 
 Description
@@ -18,6 +18,7 @@ Bump Mapping: is used to make the ocean look more realistic.
 
 Member Contributions
 --------------------
+Prabhjot Singh (Prince): 
 
 Marvin Cirignano: Worked on creating and texturing the scrolling skybox and ground and helped with game mechanics and display.
 
@@ -30,10 +31,10 @@ Runs using the same sequence of commands as the assignments. Double click host.b
 
 Controls are listed below: (also seen in the control panel)
 
-(j) jump, also starts game
-(c) switch camera, between side view and back view
-(m) mute music, controls whether music plays or not
-(g) reset, resets to initial state
+* (j) Jump: also starts game
+* (c) Switch camera: between side view and back view
+* (m) Mute music: controls whether music plays or not
+* (g) Reset: resets to initial state
 
 More Info
 ---------
