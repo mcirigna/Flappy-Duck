@@ -151,8 +151,6 @@ class Term_Project extends Scene_Component
     this.birdPosition = this.birdPositionOriginal
     this.birdSpeed = 0.0
     this.score = 0.0
-    this.rocks.splice(0,this.rocks.length)
-    this.boats.splice(0,this.boats.length)
     this.movePipes('reset')
   }
 
@@ -472,7 +470,7 @@ class Term_Project extends Scene_Component
     let spawnSide = 1
       if (Math.random() > 0.7)
         spawnSide = -1
-    let y = this.groundLevel + this.getRandInteger(1,2)
+    let y = this.groundLevel + this.getRandInteger(0,1)
     let z = this.getRandInteger(-90, -10) * spawnSide
     let rotation = Mat4.rotation(-Math.PI / 2, Vec.of(1,0,0))
     let boatModelTransform = Mat4.identity().times(Mat4.translation([0,y,z]))
@@ -641,18 +639,6 @@ class Term_Project extends Scene_Component
       this.shapes.boat.draw(graphics_state, this.boats[boat], this.materials.boat)
       this.boats[boat] = this.boats[boat].times(Mat4.translation([-0.2/this.boatSize,0,0]))
     }
-    
-    
-    // Spawn new Boat
-    if (this.boats.length < this.maxBoats && this.getRandInteger(0,this.boatSpawnFrequency) == 10) this.spawnBoat()
-
-    // Draw Boats
-    for(var boat = 0; boat < this.boats.length; boat++)
-    {
-      this.shapes.boat.draw(graphics_state, this.boats[boat], this.materials.boat)
-      this.boats[boat] = this.boats[boat].times(Mat4.translation([+0.4/this.boatSize,0,0]))
-    }
-
 
     // Draw Sun
     let sunTransform = Mat4.identity().times(Mat4.translation([0, this.backgroundSize/2.5, -this.backgroundSize + 1]))
