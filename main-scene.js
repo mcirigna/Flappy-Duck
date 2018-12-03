@@ -33,9 +33,7 @@ class Term_Project extends Scene_Component
                       axis:           new Axis_Arrows(),
                       text:           new Text_Line(24),
                       bird:           new Shape_From_File("/assets/bird.obj"),
-                      cloud:          new Shape_From_File("/assets/cloud.obj"),
-                      rock1:          new Shape_From_File("/assets/rock1.obj"),
-                      rock2:          new Shape_From_File("/assets/rock2.obj"),
+                      rock:          new Shape_From_File("/assets/rock.obj"),
                       boat:           new Shape_From_File("/assets/boat.obj"),
                       mainPipe:       new Main_Pipe(30, 30),
                       pipeTip:        new Pipe_Tip(30, 30)
@@ -49,19 +47,14 @@ class Term_Project extends Scene_Component
                       phong: context.get_instance( Phong_Shader ).material( Color.of( 1,1,0,1 ) ), // Parameters: shader, color, ambient, diffusivity, specularity, smoothnes
                       bird: context.get_instance( Phong_Shader ).material( this.basicColors('yellow') ),
                       collision: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/collision.png")} ),
-                      cloud: context.get_instance( Phong_Shader ).material( this.basicColors('white', 0.5), {ambient: 1, texture: context.get_instance( "assets/sky2.png")} ),
-                      rock: context.get_instance( Phong_Shader ).material( this.basicColors('brown', 0.9) ),
+                      rock: context.get_instance( Phong_Shader ).material( Color.of(0.50196, 0.517647, 0.52941, 0.8) ),
                       boat: context.get_instance( Phong_Shader ).material( this.basicColors('gray', 0.9) ),
                       pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') ),
                       background: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/seamlessSky.jpg")} ),
-                      dirt: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/dirt.png")} ),
-                      grass: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.png")} ),
-                      realgrass: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/realgrass.jpg")} ),
+                      grass: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.jpg")} ),
                       ocean: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/ocean.jpg")} ),
                       bumped_ocean: context.get_instance( Scroll_X_Bump ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/ocean.jpg"), texture2: context.get_instance( "assets/ocean.jpg")} ),
-                      sky1: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png")} ),
-                      sky1s: context.get_instance( Texture_Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png", true)} ),
-                      sky2: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sky2.png")} ),
+                      sky: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sky.png")} ),
                       text_image: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), { ambient: 1, diffusivity: 0, specularity: 0, texture: context.get_instance( "/assets/text.png" ) } )
                     }
 
@@ -77,15 +70,18 @@ class Term_Project extends Scene_Component
                     bounce: new Audio('assets/bounce.wav'),
                     crash: new Audio('assets/crash.mp3'),
                     crashGround: new Audio('assets/crashGround.wav'),
+                    crashWater: new Audio('assets/crashWater.wav'),
+                    oceanAmbient: new Audio('assets/ocean.wav'),
                     PP: new Audio('assets/pp.wav')
                   };
-
-      this.states = {
+     
+     // Game states
+     this.states = {
                       startScreen: 0,
                       play:        1,
                       pause:       2,
                       gameOver:    3
-                     };
+                   };
 
 
     /****************
@@ -106,7 +102,7 @@ class Term_Project extends Scene_Component
 
     // Rocks
     this.rocks = []
-    this.rockSpawnFrequency = 500
+    this.rockSpawnFrequency = 300
     this.maxRocks = 15
     this.rockSize = 4
 
@@ -174,7 +170,7 @@ class Term_Project extends Scene_Component
       case this.cameraPositions.right:
         this.currentCamera = this.cameraPositions.behind
         break
-        
+
        case this.cameraPositions.behind:
         this.currentCamera = this.cameraPositions.dynamic
         break
@@ -252,6 +248,7 @@ class Term_Project extends Scene_Component
 //                                                           } );
 //      Let's just avoid this for now because this is gonna require me to redo how the sky and ground scrolls
 //      Plus, I dont think its that necessary and the original game doesnt have it 
+
     this.new_line()
     this.key_triggered_button( "Switch Camera",   [ "c" ], () => { this.switchCamera() } );
     this.new_line()
@@ -298,7 +295,7 @@ class Term_Project extends Scene_Component
       case 'jump':
         var offset = 0.0005 * this.birdPositionHeight // Offset intended to make the jump less excessive as it approaches max height 
                                                       // and more excessive as it approaches -max height
-        this.birdSpeed += 0.35 - offset
+        this.birdSpeed += 0.3 - offset
         this.playSound("birdflap")
         break;
 
@@ -322,7 +319,7 @@ class Term_Project extends Scene_Component
         }
 
         else
-          { this.endGame(); this.playSound('crashGround', 0.2); }
+          { this.endGame(); this.playSound('crashWater', 0.2); }
 
         break;
     }
@@ -430,7 +427,7 @@ class Term_Project extends Scene_Component
       }
     }
 
-    if (this.birdPositionHeight - 0.5 >= bottomPipeHeight && this.birdPositionHeight + 0.5 <= topPipeHeight )
+    if (this.birdPositionHeight - 1.0 >= bottomPipeHeight && this.birdPositionHeight + 0.5 <= topPipeHeight )
     { if (this.state == this.states.play) this.score++; }
       
     else if (bottomPipeHeight != undefined && topPipeHeight != undefined)
@@ -515,7 +512,7 @@ class Term_Project extends Scene_Component
     switch (this.state) 
     {
       case this.states.startScreen:
-        this.shapes.text.set_string( "Flappy Bird" )
+        this.shapes.text.set_string( "Flappy Duck" )
         this.shapes.text.draw(graphics_state, messageModelTransform, this.materials.text_image)
         break
       case this.states.gameOver:
@@ -524,12 +521,8 @@ class Term_Project extends Scene_Component
         break
     }
 
-    // Draw ScoreBoard
 
-    // Static Score Board
-//     let score_model_transform = Mat4.identity().times(Mat4.translation([-this.maxWidth + 2, this.maxHeight - 2, 2]))
-//                                                .times(Mat4.scale([0.75,0.75,0.75]))
-
+    // Score
     let scoreModelTransfrom = this.currentCamera.times(Mat4.translation([-this.maxWidth+6,this.maxHeight-4,-18]))
                                                   .times(Mat4.scale([0.75,0.75,0.75]))
     // Dynamic Scoreboard
@@ -548,8 +541,10 @@ class Term_Project extends Scene_Component
     // Contains elements to load just once such as music
     if (this.onLoad)
     {
-      this.playSound('BG', 0.1, 'play');
+      this.playSound('BG', 0.2, 'play');
       this.sounds['BG'].loop = true;
+      this.playSound('oceanAmbient', 0.05, 'play');
+      this.sounds['oceanAmbient'].loop = true;
       this.onLoad = false
     }
 
@@ -569,6 +564,7 @@ class Term_Project extends Scene_Component
         break
     }
     
+
     // Move and Draw Pipes
     if (this.state != this.states.startScreen) this.movePipes()
     for(var i = 0; i < this.pipes.length; i++) {
@@ -576,18 +572,22 @@ class Term_Project extends Scene_Component
       this.shapes.pipeTip.draw(graphics_state, this.pipes[i][5], this.materials.pipe)
     }
 
+
     // Check for collisions
     if (this.state == this.states.play) this.checkCollision()
 
+
     // Spawn new rock
-    if (this.state == this.states.play && this.rocks.length < this.maxRocks && this.getRandInteger(0,this.rockSpawnFrequency) == 10) this.spawnRock()
+    if (this.rocks.length < this.maxRocks && this.getRandInteger(0,this.rockSpawnFrequency) == 10) this.spawnRock()
+
     // Draw Rocks
     for(var rock = 0; rock < this.rocks.length; rock++)
     {
-      this.shapes.rock1.draw(graphics_state, this.rocks[rock], this.materials.rock)
+      this.shapes.rock.draw(graphics_state, this.rocks[rock], this.materials.rock)
       this.rocks[rock] = this.rocks[rock].times(Mat4.translation([-0.2/this.rockSize,0,0]))
     }
     
+
     // Draw Boundaries - DELETE
     if (this.showBoundaries)
     {
@@ -606,45 +606,7 @@ class Term_Project extends Scene_Component
                                                                this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
     }
 
-    // Draw sky
-//     if (this.state == this.states.play){
-//       for ( var i = 0; i < 18; i+= 1)
-//       {
-//         let model_transform = Mat4.identity();
-//         model_transform = model_transform.times(Mat4.translation([-270, 0, -7]))
-//                                          .times(Mat4.translation([i*30, 0, 0]))
-//                                          .times(Mat4.scale([15, 15, .0001]));
-//         this.shapes.square.draw(graphics_state, model_transform, this.materials.sky1s);
-//       }
-//     }
-//     else 
-//     {
-//       for ( var i = 0; i < 18; i+= 1)
-//       {
-//         let model_transform = Mat4.identity();
-//         model_transform = model_transform.times(Mat4.translation([-270, 0, -7]))
-//                                          .times(Mat4.translation([i*30, 0, 0]))
-//                                          .times(Mat4.scale([15, 15, .0001]));
-//         this.shapes.square.draw(graphics_state, model_transform, this.materials.sky1);
-//       }
-//     }
-    /*
-    for(var i = 0; i < this.maxWidth * 4; i += 2) {
-          let model = this.groundModelTransform.times( Mat4.translation( [i + this.groundXTranslation,10 , -50] ) )
-                                               .times(Mat4.scale( [ this.groundSize, this.groundSize, this.groundSize ] ) )
-          this.shapes.cube.draw(graphics_state, model, this.materials.sky3)
-        }
 
-
-        if (this.state == this.states.play)
-        {
-          totalSeconds += this.state == this.states.play;
-          var scrollSpeed = 100;
-    //        var numImages = Math.ceil(canvas.width / img.width) + 1;
-    var xpos = totalSeconds * scrollSpeed % 1358;
-
-        }
-    */
 
     /* REFERENCE
     // Setup Sun Light
@@ -776,6 +738,8 @@ class Scroll_X extends Phong_Shader
         }`;
     }
 }
+
+
 
 class Scroll_X_Bump extends Bump_Shader
 { fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
