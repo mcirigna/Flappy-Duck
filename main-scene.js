@@ -99,6 +99,13 @@ class Term_Project extends Scene_Component
     this.groundSize = this.backgroundSize / 5
     this.groundLevel = -this.maxHeight
 
+    // Forest
+    this.forests = []
+    this.sideForests = []
+    this.forestSize = this.backgroundSize/32
+    this.forestXTranslation = 0
+    this.spawnForest()
+
     // Boats
     this.boats = []
     this.boatSpawnFrequency = 650
@@ -481,7 +488,26 @@ class Term_Project extends Scene_Component
     if (this.boats.length >= this.maxBoats) this.boats.shift() // free boats
   }
 
+  spawnForest()
+  { 
+    let count = 50
+    this.forests.splice(0, this.forests.length)
+    this.sideForests.splice(0, this.forests.length)
+    for(var i = 0; i < count; i++)
+    {
+      let forestModelTransform = Mat4.identity().times(Mat4.translation([-this.backgroundSize/2, this.groundLevel/2, -this.groundSize]))
+                                                .times(Mat4.scale([this.forestSize, this.forestSize/2.5 ,1]))
+                                                .times(Mat4.translation([i,0,0]))
 
+      let model = Mat4.identity().times(Mat4.rotation(-Math.PI / 2, Vec.of(0,1,0))).times(Mat4.translation([-this.backgroundSize/2, this.groundLevel/2, -this.groundSize]))
+                                                .times(Mat4.scale([this.forestSize, this.forestSize/2.5 ,1]))
+                                                .times(Mat4.translation([i,0,0])) 
+                                                
+
+      this.forests.push(forestModelTransform)
+      this.sideForests.push(model)
+    }
+  }
 
   /********
     Display
@@ -518,10 +544,10 @@ class Term_Project extends Scene_Component
 
 
     // Draw Sky
-    let backWallModelTransform = Mat4.identity().times(Mat4.translation([0,0,-this.backgroundSize]))
+    let backWallModelTransform = Mat4.identity().times(Mat4.translation([0,10,-this.backgroundSize]))
                                                 .times(Mat4.scale([this.backgroundSize,this.backgroundSize/1.2,1]))
 
-    let rightWallModelTransform = Mat4.identity().times(Mat4.translation([this.backgroundSize,0,0]))
+    let rightWallModelTransform = Mat4.identity().times(Mat4.translation([this.backgroundSize,10,0]))
                                                  .times(Mat4.scale([1,this.backgroundSize/1.2,this.backgroundSize]))
                                                  .times(Mat4.rotation(-Math.PI / 2, Vec.of(0,1,0)))
 
@@ -530,11 +556,14 @@ class Term_Project extends Scene_Component
     this.shapes.square.draw(graphics_state, rightWallModelTransform, this.materials.background)
 
     // Draw Forest
-    for(var i = -4; i < 4; i ++) {
-      let forestModelTransform = Mat4.identity().times(Mat4.translation([i * this.backgroundSize/4, -20, -this.backgroundSize + 1.0]))
-                                                .times(Mat4.scale([this.backgroundSize/8, this.backgroundSize/20 ,1]))
-      this.shapes.square.draw(graphics_state, forestModelTransform, this.materials.forest)
+    for(var i = 0; i < this.forests.length; i++) 
+    {
+      let model = this.forests[i].times(Mat4.translation([this.forestXTranslation,0,0]))
+      this.shapes.square.draw(graphics_state, model, this.materials.forest)
     }
+
+    this.forestXTranslation -= 0.2/this.forestSize
+    if (this.forestXTranslation < -this.forestSize/16) this.forestXTranslation = -0.2/this.forestSize
     
 
     // Draw Ground
@@ -543,8 +572,10 @@ class Term_Project extends Scene_Component
                                               .times(Mat4.rotation(Math.PI / 2, Vec.of(1,0,0)))
 
     this.shapes.square.draw(graphics_state, groundModelTransform, this.materials.bumped_ocean)
-
-
+    this.shapes.square.draw(graphics_state, groundModelTransform.times(Mat4.translation([1,0,0])), this.materials.bumped_ocean)
+    this.shapes.square.draw(graphics_state, groundModelTransform.times(Mat4.translation([2,0,0])), this.materials.bumped_ocean)
+    this.shapes.square.draw(graphics_state, groundModelTransform.times(Mat4.translation([3,0,0])), this.materials.bumped_ocean)
+    this.shapes.square.draw(graphics_state, groundModelTransform.times(Mat4.translation([4,0,0])), this.materials.bumped_ocean)
     // Draw Text 
     let messageModelTransform = this.currentCamera.times(Mat4.translation([-7,3,-15]))
 
