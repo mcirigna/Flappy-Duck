@@ -51,7 +51,7 @@ class Term_Project extends Scene_Component
                       boat: context.get_instance( Phong_Shader ).material( this.basicColors('gray', 0.9) ),
                       pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') ),
                       background: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/seamlessSky.jpg")} ),
-                      forest: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/forest.png")} ),
+                      forest: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 0.8, diffusivity: 1, specularity: 0, texture: context.get_instance("assets/forest.png")} ),
                       grass: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.jpg")} ),
                       ocean: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/ocean.jpg")} ),
                       bumped_ocean: context.get_instance( Scroll_X_Bump ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/ocean.jpg"), texture2: context.get_instance( "assets/ocean.jpg")} ),
@@ -497,11 +497,12 @@ class Term_Project extends Scene_Component
                                                  .times(Mat4.scale([1,this.backgroundSize,this.backgroundSize]))
                                                  .times(Mat4.rotation(-Math.PI / 2, Vec.of(0,1,0)))
 
+
     this.shapes.square.draw(graphics_state, backWallModelTransform, this.materials.background)
     this.shapes.square.draw(graphics_state, rightWallModelTransform, this.materials.background)
-    for(var i = -8; i < 8; i ++) {
-      let forestModelTransform = Mat4.identity().times(Mat4.translation([i * this.backgroundSize/8.0,-30.0,-this.backgroundSize + 1.0]))
-                                                .times(Mat4.scale([this.backgroundSize/8.0,this.backgroundSize/8.0,1]))
+    for(var i = -4; i < 4; i ++) {
+      let forestModelTransform = Mat4.identity().times(Mat4.translation([i * this.backgroundSize/4, -18,-this.backgroundSize + 1.0]))
+                                                .times(Mat4.scale([this.backgroundSize/8,this.backgroundSize/22,1]))
       this.shapes.square.draw(graphics_state, forestModelTransform, this.materials.forest)
     }
     
