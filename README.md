@@ -24,6 +24,8 @@ Marvin Cirignano: Worked on creating and texturing the scrolling skybox and grou
 
 Eddie Huang: Worked on pipe generation and significantly improved pipe design from closed cylinders to their current state, and implemented a moving bump map for the ocean. Worked on forest background.
 
+Wing Han So (Stella): Worked with scrolling backgroud for the horizontally background move while the game is running, and Marvin helped for the texturing. Worked with sun light and objects.
+
 Instructions
 -------------------
 
