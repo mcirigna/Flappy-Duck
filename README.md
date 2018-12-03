@@ -22,7 +22,7 @@ Prabhjot Singh (Prince):
 
 Marvin Cirignano: Worked on creating and texturing the scrolling skybox and ground and helped with game mechanics and display.
 
-Eddie Huang: Worked on pipe generation and significantly improved pipe design from closed cylinders to their current state, and implemented a moving bump map for the ocean.
+Eddie Huang: Worked on pipe generation and significantly improved pipe design from closed cylinders to their current state, and implemented a moving bump map for the ocean. Worked on forest background.
 
 Instructions
 -------------------
