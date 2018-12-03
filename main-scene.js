@@ -45,23 +45,20 @@ class Term_Project extends Scene_Component
     this.materials =
                     { 
                       phong: context.get_instance( Phong_Shader ).material( Color.of( 1,1,0,1 ) ), // Parameters: shader, color, ambient, diffusivity, specularity, smoothnes
-                      bird: context.get_instance( Phong_Shader ).material( this.basicColors('yellow') ),
+                      bird: context.get_instance( Phong_Shader ).material( this.basicColors('yellow'), {ambient: 0.1, diffusivity: 0.8, specularity: 0.2} ),
                       collision: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/collision.png")} ),
-                      rock: context.get_instance( Phong_Shader ).material( Color.of(0.50196, 0.517647, 0.52941, 0.8) ),
+                      rock: context.get_instance( Phong_Shader ).material( Color.of(0.50196, 0.517647, 0.52941, 1), {ambient: 0.1, diffusivity: 0.8, specularity: 0.2} ),
                       boat: context.get_instance( Phong_Shader ).material( this.basicColors('gray', 0.9) ),
-                      pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') ),
+                      pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green'), {ambient: 0.1, diffusivity: 0.5, specularity: 0.7} ),
                       background: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/seamlessSky.jpg")} ),
-                      forest: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 0.8, diffusivity: 1, specularity: 0, texture: context.get_instance("assets/forest.png")} ),
+                      forest: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, diffusivity: 1, specularity: 0, texture: context.get_instance("assets/forest.png")} ),
                       grass: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.jpg")} ),
-                      ocean: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/ocean.jpg")} ),
-                      bumped_ocean: context.get_instance( Scroll_X_Bump ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/ocean.jpg"), texture2: context.get_instance( "assets/ocean.jpg")} ),
+                      ocean: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 0.1, diffusivity: 0.2, specularity: 1, texture: context.get_instance( "assets/ocean.jpg")} ),
+                      bumped_ocean: context.get_instance( Scroll_X_Bump ).material( Color.of( 0,0,0,1 ), {ambient: 0.8, diffusivity: 0.7, specularity: 1, texture: context.get_instance( "assets/ocean.jpg"), texture2: context.get_instance( "assets/ocean.jpg")} ),
                       sky: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sky.png")} ),
+                      sun: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sunJoke.png")} ),
                       text_image: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), { ambient: 1, diffusivity: 0, specularity: 0, texture: context.get_instance( "/assets/text.png" ) } )
                     }
-
-
-    // Available Lights
-    this.lights = [ new Light( Vec.of( -5,5,5,1 ), Color.of( 0,1,1,1 ), 100000 ) ];
 
 
     // Available Sounds
@@ -203,6 +200,7 @@ class Term_Project extends Scene_Component
       case 'green':   return Color.of(0, 1, 0, opacity);
       case 'blue':    return Color.of(0, 0, 1, opacity);
       case 'yellow':  return Color.of(1, 1, 0, opacity);
+      case 'orange':  return Color.of(1, 0.6471, 0, opacity);
       case 'cyan':    return Color.of(0, 1, 1, opacity);
       case 'magenta': return Color.of(1, 0, 1, opacity);
       case 'gray':    return Color.of(0.5, 0.5, 0.5, opacity);
@@ -467,9 +465,15 @@ class Term_Project extends Scene_Component
   ********/
   display( graphics_state )
   { 
-    graphics_state.lights = this.lights;        // Use the lights stored in this.lights.
     const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
     const FPS = 1 / dt  // Frames per second
+    var sunScale = this.interpolateInt(t, this.backgroundSize/20, this.backgroundSize/10)
+    graphics_state.lights = [
+                              new Light( Vec.of(0, this.maxHeight - 8, -this.backgroundSize + 1, 1), Color.of( 0.9921, 0.7216, 0.0745, 1 ), 10000 * sunScale ), // Sun
+                              new Light( Vec.of(0, 0, 30, 1), this.basicColors(), 25000 ),
+                              new Light( Vec.of(0, 0, this.backgroundSize, 0), this.basicColors(), 25 )
+                            ];  
+    
 
     // Camera Positions
     if (this.currentCamera == this.cameraPositions.dynamic)
@@ -489,20 +493,23 @@ class Term_Project extends Scene_Component
     this.shapes.text.set_string( this.cameraTextString ) 
     this.shapes.text.draw(graphics_state, cameraTextTransform, this.materials.text_image);
 
+
     // Draw Sky
     let backWallModelTransform = Mat4.identity().times(Mat4.translation([0,0,-this.backgroundSize]))
-                                                .times(Mat4.scale([this.backgroundSize,this.backgroundSize,1]))
+                                                .times(Mat4.scale([this.backgroundSize,this.backgroundSize/1.2,1]))
 
     let rightWallModelTransform = Mat4.identity().times(Mat4.translation([this.backgroundSize,0,0]))
-                                                 .times(Mat4.scale([1,this.backgroundSize,this.backgroundSize]))
+                                                 .times(Mat4.scale([1,this.backgroundSize/1.2,this.backgroundSize]))
                                                  .times(Mat4.rotation(-Math.PI / 2, Vec.of(0,1,0)))
 
 
     this.shapes.square.draw(graphics_state, backWallModelTransform, this.materials.background)
     this.shapes.square.draw(graphics_state, rightWallModelTransform, this.materials.background)
+
+    // Draw Forest
     for(var i = -4; i < 4; i ++) {
-      let forestModelTransform = Mat4.identity().times(Mat4.translation([i * this.backgroundSize/4, -18,-this.backgroundSize + 1.0]))
-                                                .times(Mat4.scale([this.backgroundSize/8,this.backgroundSize/22,1]))
+      let forestModelTransform = Mat4.identity().times(Mat4.translation([i * this.backgroundSize/4, -20, -this.backgroundSize + 1.0]))
+                                                .times(Mat4.scale([this.backgroundSize/8, this.backgroundSize/20 ,1]))
       this.shapes.square.draw(graphics_state, forestModelTransform, this.materials.forest)
     }
     
@@ -513,6 +520,7 @@ class Term_Project extends Scene_Component
                                               .times(Mat4.rotation(Math.PI / 2, Vec.of(1,0,0)))
 
     this.shapes.square.draw(graphics_state, groundModelTransform, this.materials.bumped_ocean)
+
 
     // Draw Text 
     let messageModelTransform = this.currentCamera.times(Mat4.translation([-7,3,-15]))
@@ -605,6 +613,12 @@ class Term_Project extends Scene_Component
     }
     
 
+    // Draw Sun
+    let sunTransform = Mat4.identity().times(Mat4.translation([0, this.backgroundSize/2.5, -this.backgroundSize + 1]))
+                                                .times(Mat4.scale([sunScale, sunScale, sunScale]))
+    this.shapes.square.draw(graphics_state, sunTransform, this.materials.sun)
+
+
     // Draw Boundaries - DELETE
     if (this.showBoundaries)
     {
@@ -622,18 +636,6 @@ class Term_Project extends Scene_Component
       this.shapes.cube.draw( graphics_state, Mat4.identity().times(Mat4.translation([-1 * this.maxWidth, 0, 0])).times(Mat4.rotation(Math.PI/2, [0, 1, 0])).times(Mat4.scale([1, 1, 0.1])),
                                                                this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
     }
-
-
-
-    /* REFERENCE
-    // Setup Sun Light
-    let sunLight  = [ new Light ( Vec.of( 0,0,0,1 ), Color.of(sunColorRed, 0, sunColorBlue, 1), 10 ** sunScale) ]
-    graphics_state.lights = sunLight
-
-    this.shapes.sphere.draw(graphics_state, planet, this.materials.planet.override( {color: Color.of(0.2, 1, 0.5, 1), specularity: 1, diffusivity: 0.2, gouraud: 1} ))
-
-    this.initial_camera_location = Mat4.look_at( Vec.of( 0,10,20 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ).map( (x,i) => Vec.from( graphics_state.camera_transform[i] ).mix( x, 0.1 ) )
-    */
 
   }
 
