@@ -69,7 +69,8 @@ class Term_Project extends Scene_Component
                     crash: new Audio('assets/crash.mp3'),
                     crashGround: new Audio('assets/crashGround.wav'),
                     crashWater: new Audio('assets/crashWater.wav'),
-                    // oceanAmbient: new Audio('assets/ocean.wav'),
+                    point: new Audio('assets/point.wav'),
+                    oceanAmbient: new Audio('assets/ocean.wav'),
                     PP: new Audio('assets/pp.wav')
                   };
      
@@ -98,9 +99,15 @@ class Term_Project extends Scene_Component
     this.groundSize = this.backgroundSize / 5
     this.groundLevel = -this.maxHeight
 
+    // Boats
+    this.boats = []
+    this.boatSpawnFrequency = 750
+    this.maxBoats = 5
+    this.boatSize = 4
+
     // Rocks
     this.rocks = []
-    this.rockSpawnFrequency = 300
+    this.rockSpawnFrequency = 500
     this.maxRocks = 15
     this.rockSize = 4
 
@@ -144,7 +151,6 @@ class Term_Project extends Scene_Component
     this.birdPosition = this.birdPositionOriginal
     this.birdSpeed = 0.0
     this.score = 0.0
-    this.rocks.splice(0,this.rocks.length)
     this.movePipes('reset')
   }
 
@@ -432,7 +438,7 @@ class Term_Project extends Scene_Component
     }
 
     if (this.birdPositionHeight - 1.0 >= bottomPipeHeight && this.birdPositionHeight + 0.5 <= topPipeHeight )
-    { if (this.state == this.states.play) this.score++; }
+    { if (this.state == this.states.play) {this.score++; this.playSound('point', 0.3);} }
       
     else if (bottomPipeHeight != undefined && topPipeHeight != undefined)
     { 
@@ -459,6 +465,23 @@ class Term_Project extends Scene_Component
       if (this.rocks.length == this.maxRocks) this.rocks.shift()  // free rocks
   }
 
+  spawnBoat()
+  {
+    let spawnSide = 1
+      if (Math.random() > 0.7)
+        spawnSide = -1
+    let y = this.groundLevel + 1
+    let z = this.getRandInteger(-90, -10) * spawnSide
+    let rotation = Mat4.rotation(-Math.PI / 2, Vec.of(1,0,0))
+    let boatModelTransform = Mat4.identity().times(Mat4.translation([0,y,z]))
+                                            .times(rotation)
+                                            .times(Mat4.translation([-this.groundSize, 0, 0]))
+                                            .times(Mat4.scale([this.boatSize,this.boatSize,this.boatSize])) 
+    this.boats.push(boatModelTransform)
+    if (this.boats.length >= this.maxBoats) this.boats.shift() // free boats
+  }
+
+
 
   /********
     Display
@@ -468,13 +491,13 @@ class Term_Project extends Scene_Component
     const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
     const FPS = 1 / dt  // Frames per second
     var sunScale = this.interpolateInt(t, this.backgroundSize/50, this.backgroundSize/10)
-    var sunLight = this.interpolateInt(t, sunScale * 10000 + 400000, sunScale * 100000)
+    var sunLight = this.interpolateInt(t, sunScale * 10000 + 1000000, sunScale * 100000)
     graphics_state.lights = [
                               new Light( Vec.of(0, this.maxHeight - 8, -this.backgroundSize + 1, 1), Color.of( 0.9921, 0.7216, 0.0745, 1 ), sunLight ),
                               new Light( Vec.of(0, this.maxHeight - 8, this.backgroundSize + 1, 1), Color.of( 0.9921, 0.7216, 0.0745, 1 ), sunLight / 2 ) // Sun
                             ];  
     
-    console.log(sunLight)
+
     // Camera Positions
     if (this.currentCamera == this.cameraPositions.dynamic)
     {
@@ -549,14 +572,14 @@ class Term_Project extends Scene_Component
 
     // Score
     let scoreModelTransfrom = this.currentCamera.times(Mat4.translation([-this.maxWidth+6,this.maxHeight-4,-18]))
-                                                  .times(Mat4.scale([0.75,0.75,0.75]))
+                                                  .times(Mat4.scale([0.5,0.5,0.5]))
     // Dynamic Scoreboard
     switch (this.currentCamera)
     {
       case this.cameraPositions.dynamic:
       case this.cameraPositions.behind:
-        scoreModelTransfrom = this.currentCamera.times(Mat4.translation([this.maxWidth-16,-this.maxHeight+4,-18]))
-                                                  .times(Mat4.scale([0.75,0.75,0.75]))
+        scoreModelTransfrom = this.currentCamera.times(Mat4.translation([this.maxWidth-12,-this.maxHeight+4,-18]))
+                                                  .times(Mat4.scale([0.5,0.5,0.5]))
     }
 
     this.shapes.text.set_string( "Score: " + this.score.toString() ) 
@@ -568,8 +591,8 @@ class Term_Project extends Scene_Component
     {
       this.playSound('BG', 0.2, 'play');
       this.sounds['BG'].loop = true;
-      // this.playSound('oceanAmbient', 0.05, 'play');
-      // this.sounds['oceanAmbient'].loop = true;
+      this.playSound('oceanAmbient', 0.2, 'play');
+      this.sounds['oceanAmbient'].loop = true;
       this.onLoad = false
     }
 
@@ -598,10 +621,6 @@ class Term_Project extends Scene_Component
     }
 
 
-    // Check for collisions
-    if (this.state == this.states.play) this.checkCollision()
-
-
     // Spawn new rock
     if (this.rocks.length < this.maxRocks && this.getRandInteger(0,this.rockSpawnFrequency) == 10) this.spawnRock()
 
@@ -611,7 +630,18 @@ class Term_Project extends Scene_Component
       this.shapes.rock.draw(graphics_state, this.rocks[rock], this.materials.rock)
       this.rocks[rock] = this.rocks[rock].times(Mat4.translation([-0.2/this.rockSize,0,0]))
     }
-    
+
+
+    // Spawn new Boat
+    if (this.boats.length < this.maxBoats && this.getRandInteger(0,this.boatSpawnFrequency) == 10) this.spawnBoat()
+
+    // Draw Boats
+    for(var boat = 0; boat < this.boats.length; boat++)
+    {
+      this.shapes.boat.draw(graphics_state, this.boats[boat], this.materials.boat)
+      this.boats[boat] = this.boats[boat].times(Mat4.translation([0.2/this.boatSize,0,0]))
+    }
+
 
     // Draw Sun
     let sunTransform = Mat4.identity().times(Mat4.translation([0, this.backgroundSize/2.5, -this.backgroundSize + 1]))
@@ -636,6 +666,9 @@ class Term_Project extends Scene_Component
       this.shapes.cube.draw( graphics_state, Mat4.identity().times(Mat4.translation([-1 * this.maxWidth, 0, 0])).times(Mat4.rotation(Math.PI/2, [0, 1, 0])).times(Mat4.scale([1, 1, 0.1])),
                                                                this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
     }
+
+    // Check for collisions
+    if (this.state == this.states.play) this.checkCollision()
 
   }
 
