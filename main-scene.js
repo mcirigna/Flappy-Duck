@@ -98,6 +98,12 @@ class Term_Project extends Scene_Component
     this.groundSize = this.backgroundSize / 5
     this.groundLevel = -this.maxHeight
 
+    // Boats
+    this.boats = []
+    this.boatSpawnFrequency = 700
+    this.maxBoats = 5
+    this.boatSize = 4
+
     // Rocks
     this.rocks = []
     this.rockSpawnFrequency = 300
@@ -145,6 +151,7 @@ class Term_Project extends Scene_Component
     this.birdSpeed = 0.0
     this.score = 0.0
     this.rocks.splice(0,this.rocks.length)
+    this.boats.splice(0,this.boats.length)
     this.movePipes('reset')
   }
 
@@ -459,6 +466,22 @@ class Term_Project extends Scene_Component
       if (this.rocks.length == this.maxRocks) this.rocks.shift()  // free rocks
   }
 
+  spawnBoat()
+  {
+    let spawnSide = 1
+      if (Math.random() > 0.7)
+        spawnSide = -1
+    let y = this.groundLevel + this.getRandInteger(1,2)
+    let z = this.getRandInteger(-90, -10) * spawnSide
+    let rotation = Mat4.rotation(-Math.PI / 2, Vec.of(1,0,0))
+    let boatModelTransform = Mat4.identity().times(Mat4.translation([0,y,z]))
+                                            .times(rotation)
+                                            .times(Mat4.translation([this.groundSize, 0, 0]))
+                                            .times(Mat4.scale([this.boatSize,this.boatSize,this.boatSize])) 
+    this.boats.push(boatModelTransform)
+    if (this.boats.length >= this.maxBoats) this.boats.shift() // free boats
+  }
+
 
   /********
     Display
@@ -597,11 +620,6 @@ class Term_Project extends Scene_Component
       this.shapes.pipeTip.draw(graphics_state, this.pipes[i][5], this.materials.pipe)
     }
 
-
-    // Check for collisions
-    if (this.state == this.states.play) this.checkCollision()
-
-
     // Spawn new rock
     if (this.rocks.length < this.maxRocks && this.getRandInteger(0,this.rockSpawnFrequency) == 10) this.spawnRock()
 
@@ -610,6 +628,16 @@ class Term_Project extends Scene_Component
     {
       this.shapes.rock.draw(graphics_state, this.rocks[rock], this.materials.rock)
       this.rocks[rock] = this.rocks[rock].times(Mat4.translation([-0.2/this.rockSize,0,0]))
+    }
+
+    // Spawn new Boat
+    if (this.boats.length < this.maxBoats && this.getRandInteger(0,this.boatSpawnFrequency) == 10) this.spawnBoat()
+
+    // Draw Boats
+    for(var boat = 0; boat < this.boats.length; boat++)
+    {
+      this.shapes.boat.draw(graphics_state, this.boats[boat], this.materials.boat)
+      this.boats[boat] = this.boats[boat].times(Mat4.translation([-0.2/this.boatSize,0,0]))
     }
     
 
@@ -636,6 +664,9 @@ class Term_Project extends Scene_Component
       this.shapes.cube.draw( graphics_state, Mat4.identity().times(Mat4.translation([-1 * this.maxWidth, 0, 0])).times(Mat4.rotation(Math.PI/2, [0, 1, 0])).times(Mat4.scale([1, 1, 0.1])),
                                                                this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
     }
+
+    // Check for collisions
+    if (this.state == this.states.play) this.checkCollision()
 
   }
 
