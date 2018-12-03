@@ -136,7 +136,8 @@ class Term_Project extends Scene_Component
                             behind: Mat4.inverse(Mat4.look_at( Vec.of( -20,5,10 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) )),
                             dynamic: this.dynamic
                            };
-    this.currentCamera = this.cameraPositions.center
+    this.currentCamera = this.cameraPositions.center;
+    this.cameraTextString = "Center";
   }
 
   reset()
@@ -165,18 +166,22 @@ class Term_Project extends Scene_Component
       {
        case this.cameraPositions.center:
         this.currentCamera = this.cameraPositions.right
+        this.cameraTextString = "Right";
         break
 
       case this.cameraPositions.right:
         this.currentCamera = this.cameraPositions.behind
+        this.cameraTextString = "Behind";
         break
 
        case this.cameraPositions.behind:
         this.currentCamera = this.cameraPositions.dynamic
+        this.cameraTextString = "Dynamic";
         break
 
        default:
         this.currentCamera = this.cameraPositions.center
+        this.cameraTextString = "Center";
         
       }
   }
@@ -343,7 +348,7 @@ class Term_Project extends Scene_Component
     this.pipes[this.pipes.length - 1].push(this.pipes[this.pipes.length - 1][0][0][3] + 5);   // Pipe's X coordinate
     this.pipes[this.pipes.length - 1].push(pipeHeight);                                       // Initial pipe's height
     this.pipes[this.pipes.length - 1].push('bottom'); 
-    this.pipes[this.pipes.length - 1].push(this.pipePositionBottom.times(Mat4.translation([0, 0, -(pipeHeight + 1.0)/2.0])));                                         
+    this.pipes[this.pipes.length - 1].push(this.pipePositionBottom.times(Mat4.translation([0, 0, -(pipeHeight - 1.0)/2.0])));                                         
     
     // Top pipe
     this.pipes.push([]);
@@ -477,7 +482,11 @@ class Term_Project extends Scene_Component
     
     const desired_camera = Mat4.inverse(this.currentCamera)
     graphics_state.camera_transform = desired_camera.map( (x,i) => Vec.from( graphics_state.camera_transform[i] ).mix( x, 4*dt ) );
-    
+     
+    let cameraTextTransform = this.currentCamera.times(Mat4.translation([-this.maxWidth+6,-this.maxHeight+4,-18]))
+                                                  .times(Mat4.scale([0.5,0.5,0.5]))
+    this.shapes.text.set_string( this.cameraTextString ) 
+    this.shapes.text.draw(graphics_state, cameraTextTransform, this.materials.text_image);
 
     // Draw Sky
     let backWallModelTransform = Mat4.identity().times(Mat4.translation([0,0,-this.backgroundSize]))
