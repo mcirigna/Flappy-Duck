@@ -101,7 +101,7 @@ class Term_Project extends Scene_Component
 
     // Boats
     this.boats = []
-    this.boatSpawnFrequency = 700
+    this.boatSpawnFrequency = 650
     this.maxBoats = 5
     this.boatSize = 4
 
@@ -470,12 +470,12 @@ class Term_Project extends Scene_Component
     let spawnSide = 1
       if (Math.random() > 0.7)
         spawnSide = -1
-    let y = this.groundLevel + this.getRandInteger(0,1)
+    let y = this.groundLevel + 1
     let z = this.getRandInteger(-90, -10) * spawnSide
     let rotation = Mat4.rotation(-Math.PI / 2, Vec.of(1,0,0))
     let boatModelTransform = Mat4.identity().times(Mat4.translation([0,y,z]))
                                             .times(rotation)
-                                            .times(Mat4.translation([-this.groundSize, 0, 0]))
+                                            .times(Mat4.translation([this.groundSize, 0, 0]))
                                             .times(Mat4.scale([this.boatSize,this.boatSize,this.boatSize])) 
     this.boats.push(boatModelTransform)
     if (this.boats.length >= this.maxBoats) this.boats.shift() // free boats
