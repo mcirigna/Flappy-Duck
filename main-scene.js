@@ -51,10 +51,10 @@ class Term_Project extends Scene_Component
                       boat: context.get_instance( Phong_Shader ).material( this.basicColors('gray', 0.9) ),
                       pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green'), {ambient: 0.1, diffusivity: 0.5, specularity: 0.7} ),
                       background: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/seamlessSky.jpg")} ),
-                      forest: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, diffusivity: 1, specularity: 0, texture: context.get_instance("assets/forest.png")} ),
+                      forest: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, diffusivity: 0.5, specularity: 0.2, texture: context.get_instance("assets/forest.png")} ),
                       grass: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.jpg")} ),
-                      ocean: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 0.1, diffusivity: 0.2, specularity: 1, texture: context.get_instance( "assets/ocean.jpg")} ),
-                      bumped_ocean: context.get_instance( Scroll_X_Bump ).material( Color.of( 0,0,0,1 ), {ambient: 0.8, diffusivity: 0.7, specularity: 1, texture: context.get_instance( "assets/ocean.jpg"), texture2: context.get_instance( "assets/ocean.jpg")} ),
+                      ocean: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, diffusivity: 1, specularity: 1, texture: context.get_instance( "assets/ocean.jpg")} ),
+                      bumped_ocean: context.get_instance( Scroll_X_Bump ).material( Color.of( 0,0,0,1 ), {ambient: 1, diffusivity: 1, specularity: 1, texture: context.get_instance( "assets/ocean.jpg"), texture2: context.get_instance( "assets/ocean.jpg")} ),
                       sky: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sky.png")} ),
                       sun: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sunJoke.png")} ),
                       text_image: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), { ambient: 1, diffusivity: 0, specularity: 0, texture: context.get_instance( "/assets/text.png" ) } )
@@ -467,14 +467,14 @@ class Term_Project extends Scene_Component
   { 
     const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
     const FPS = 1 / dt  // Frames per second
-    var sunScale = this.interpolateInt(t, this.backgroundSize/20, this.backgroundSize/10)
+    var sunScale = this.interpolateInt(t, this.backgroundSize/50, this.backgroundSize/10)
+    var sunLight = this.interpolateInt(t, sunScale * 10000 + 400000, sunScale * 100000)
     graphics_state.lights = [
-                              new Light( Vec.of(0, this.maxHeight - 8, -this.backgroundSize + 1, 1), Color.of( 0.9921, 0.7216, 0.0745, 1 ), 10000 * sunScale ), // Sun
-                              new Light( Vec.of(0, 0, 30, 1), this.basicColors(), 25000 ),
-                              new Light( Vec.of(0, 0, this.backgroundSize, 0), this.basicColors(), 25 )
+                              new Light( Vec.of(0, this.maxHeight - 8, -this.backgroundSize + 1, 1), Color.of( 0.9921, 0.7216, 0.0745, 1 ), sunLight ),
+                              new Light( Vec.of(0, this.maxHeight - 8, this.backgroundSize + 1, 1), Color.of( 0.9921, 0.7216, 0.0745, 1 ), sunLight / 2 ) // Sun
                             ];  
     
-
+    console.log(sunLight)
     // Camera Positions
     if (this.currentCamera == this.cameraPositions.dynamic)
     {
