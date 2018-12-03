@@ -31,8 +31,13 @@ class Term_Project extends Scene_Component
                       cappedCylinder: new Capped_Cylinder(30, 30),
                       roundedCylinder:new Rounded_Capped_Cylinder(30, 30),
                       axis:           new Axis_Arrows(),
-                      text:           new Text_Line(10)
-                   }
+                      text:           new Text_Line(24),
+                      bird:           new Shape_From_File("/assets/bird.obj"),
+                      rock:          new Shape_From_File("/assets/rock.obj"),
+                      boat:           new Shape_From_File("/assets/boat.obj"),
+                      mainPipe:       new Main_Pipe(30, 30),
+                      pipeTip:        new Pipe_Tip(30, 30)
+                   }  
     this.submit_shapes( context, shapes );
 
 
@@ -40,19 +45,20 @@ class Term_Project extends Scene_Component
     this.materials =
                     { 
                       phong: context.get_instance( Phong_Shader ).material( Color.of( 1,1,0,1 ) ), // Parameters: shader, color, ambient, diffusivity, specularity, smoothnes
-                      bird: context.get_instance( Phong_Shader ).material( this.basicColors('yellow') ),
-                      pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') ),
-                      dirt: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/dirt.png")} ),
-                      grass: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.png")} ),
-                      sky1: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png")} ),
-                      sky1s: context.get_instance( Texture_Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/sky1.png", true)} ),
-                      sky2: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sky2.png")} ),
+                      bird: context.get_instance( Phong_Shader ).material( this.basicColors('yellow'), {ambient: 0.1, diffusivity: 0.8, specularity: 0.2} ),
+                      collision: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/collision.png")} ),
+                      rock: context.get_instance( Phong_Shader ).material( Color.of(0.50196, 0.517647, 0.52941, 1), {ambient: 0.1, diffusivity: 0.8, specularity: 0.2} ),
+                      boat: context.get_instance( Phong_Shader ).material( this.basicColors('gray', 0.9) ),
+                      pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green'), {ambient: 0.1, diffusivity: 0.5, specularity: 0.7} ),
+                      background: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/seamlessSky.jpg")} ),
+                      forest: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, diffusivity: 0.5, specularity: 0.2, texture: context.get_instance("assets/forest.png")} ),
+                      grass: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.jpg")} ),
+                      ocean: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, diffusivity: 1, specularity: 1, texture: context.get_instance( "assets/ocean.jpg")} ),
+                      bumped_ocean: context.get_instance( Scroll_X_Bump ).material( Color.of( 0,0,0,1 ), {ambient: 1, diffusivity: 1, specularity: 1, texture: context.get_instance( "assets/ocean.jpg"), texture2: context.get_instance( "assets/ocean.jpg")} ),
+                      sky: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sky.png")} ),
+                      sun: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/sunJoke.png")} ),
                       text_image: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), { ambient: 1, diffusivity: 0, specularity: 0, texture: context.get_instance( "/assets/text.png" ) } )
                     }
-
-
-    // Available Lights
-    this.lights = [ new Light( Vec.of( -5,5,5,1 ), Color.of( 0,1,1,1 ), 100000 ) ];
 
 
     // Available Sounds
@@ -62,9 +68,18 @@ class Term_Project extends Scene_Component
                     bounce: new Audio('assets/bounce.wav'),
                     crash: new Audio('assets/crash.mp3'),
                     crashGround: new Audio('assets/crashGround.wav'),
+                    crashWater: new Audio('assets/crashWater.wav'),
+                    // oceanAmbient: new Audio('assets/ocean.wav'),
                     PP: new Audio('assets/pp.wav')
                   };
-
+     
+     // Game states
+     this.states = {
+                      startScreen: 0,
+                      play:        1,
+                      pause:       2,
+                      gameOver:    3
+                   };
 
 
     /****************
@@ -74,52 +89,100 @@ class Term_Project extends Scene_Component
     this.showBoundaries = false; // DELETE
     this.maxHeight = 10;
     this.maxWidth = 18;
-    this.play = false
+    this.state = this.states.startScreen
+
+    // Background for Sky
+    this.backgroundSize = 500
+                  
+    // Ground
+    this.groundSize = this.backgroundSize / 5
+    this.groundLevel = -this.maxHeight
+
+    // Rocks
+    this.rocks = []
+    this.rockSpawnFrequency = 300
+    this.maxRocks = 15
+    this.rockSize = 4
 
     // Score
     this.score = 0.0
-    this.score_model_transform = Mat4.identity().times(Mat4.translation([-this.maxWidth - 4, this.maxHeight + 2, -7 ]))
+    this.finalScore = 0.0
 
     // Bird
     this.birdPositionOriginal = this.birdPosition = Mat4.identity().times(Mat4.rotation(Math.PI/2, [0, 1, 0]));
     this.birdPositionHeight = this.birdPosition[1][3];
     this.birdAcceleration = -0.25 / 60;
     this.birdSpeed = 0.0;
-
-    // Ground
-    this.groundSize = 7
-    this.groundHeight = -(this.maxHeight);
-    this.groundModelTransform = Mat4.identity().times(Mat4.translation( [-(this.maxWidth + 2), this.groundHeight, 0] ) )
-                                               
-    this.groundXTranslation = 0; // translate ground left by this amount every frame, this is incremented every frame
-    this.groundSpeed = 0.2; // decrement groundXTranslation by this amount at each display
-    this.groundMaxXTranslation = -20; // used to simulate an infinite ground since there is only a finite # of ground cubes
+    this.collisionAnimationTime = 0
 
     // Pipes
-    this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth + 5, -(this.maxHeight - 1), 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
-    this.pipePositionUpper = Mat4.identity().times(Mat4.translation([this.maxWidth + 5, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
-    this.pipes = [];
+    this.pipePositionBottom = Mat4.identity().times(Mat4.translation([this.maxWidth + 25, -(this.maxHeight - 1), 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
+    this.pipePositionUpper = Mat4.identity().times(Mat4.translation([this.maxWidth + 25, this.maxHeight, 0])).times(Mat4.rotation(Math.PI/2, [1, 0, 0]));
+    this.pipes = []; // Each element, a pipe, holds [0] = its position (Mat4), [1] = its speed, [2] = its X coordinate, [3] = its height, [4] = 'top' or 'bottom'
     this.distanceTraveled = 0.0;
     this.pipeSpeed = -5.0;    // this is actually the number we divide 1 by to obtain pipe speed, did this to avoid rounding error
     this.minPipeHeight = 4;   // Both minPipeHeight and maxPipeHeight refer to bottom pipe
     this.maxPipeHeight = 16;
 
-    // old code for pipes below, uncomment if you want to refactor back to a fixed length rather than dynamic length array
-    // this.maxPipes = 6;
-    // this.pipes = new Array(this.maxPipes).fill(null).map(()=>new Array(3).fill(null));  // Each element, a pipe, holds [0] = its position (Mat4),
-//     for(var i = 0; i < this.maxPipes; i++)                                             // [1] = its speed, [2] = its X coordinate, [3] = its height, [4] = 'top' or 'bottom'
-//     {
-//       this.pipes[i][0] = this.pipePositionBottom;
-//       this.pipes[i][1] = 0;                        // Initial pipe's speed is 0
-//       this.pipes[i][2] = this.pipes[i][0][0][3];   // Pipe's X coordinate
-//       this.pipes[i][3] = 1;                        // Initial pipe's height
-//       this.pipes[i][4] = 'bottom';                 // ALl pipes start at the bottom
-//     }
-    
-
+    // Camera
+    this.initialDynamicPosition = [0,   0, 25]
+    this.finalDynamicPosition   = [-10, 5, 10]
+    this.dynamic = Mat4.inverse(Mat4.look_at( Vec.of(0, 0, -15 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ));
+    this.cameraPositions = {
+                            center: this.initial_camera_location,
+                            right: Mat4.inverse(Mat4.look_at( Vec.of( 10,0,25 ), Vec.of( 10,0,0 ), Vec.of( 0,1,0 ) )),
+                            behind: Mat4.inverse(Mat4.look_at( Vec.of( -20,5,10 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) )),
+                            dynamic: this.dynamic
+                           };
+    this.currentCamera = this.cameraPositions.center;
+    this.cameraTextString = "Center";
   }
 
+  reset()
+  {
+    this.state = this.states.startScreen
+    this.birdPosition = this.birdPositionOriginal
+    this.birdSpeed = 0.0
+    this.score = 0.0
+    this.rocks.splice(0,this.rocks.length)
+    this.movePipes('reset')
+  }
 
+  endGame()
+  {
+    this.state = this.states.gameOver
+    this.finalScore = this.score
+    //this.currentCamera = this.cameraPositions.center  // Uncomment to reset camera angle at death 
+  }
+
+  switchCamera(position)
+  { 
+    if (this.cameraPositions[position] != undefined)
+      this.currentCamera = this.cameraPositions[position]
+    else 
+      switch (this.currentCamera)
+      {
+       case this.cameraPositions.center:
+        this.currentCamera = this.cameraPositions.right
+        this.cameraTextString = "Right";
+        break
+
+      case this.cameraPositions.right:
+        this.currentCamera = this.cameraPositions.behind
+        this.cameraTextString = "Behind";
+        break
+
+       case this.cameraPositions.behind:
+        this.currentCamera = this.cameraPositions.dynamic
+        this.cameraTextString = "Dynamic";
+        break
+
+       default:
+        this.currentCamera = this.cameraPositions.center
+        this.cameraTextString = "Center";
+        
+      }
+  }
 
   /**************************************************************
     Returns a chosen color with the specified opacity (0.0 - 1.0)
@@ -137,6 +200,7 @@ class Term_Project extends Scene_Component
       case 'green':   return Color.of(0, 1, 0, opacity);
       case 'blue':    return Color.of(0, 0, 1, opacity);
       case 'yellow':  return Color.of(1, 1, 0, opacity);
+      case 'orange':  return Color.of(1, 0.6471, 0, opacity);
       case 'cyan':    return Color.of(0, 1, 1, opacity);
       case 'magenta': return Color.of(1, 0, 1, opacity);
       case 'gray':    return Color.of(0.5, 0.5, 0.5, opacity);
@@ -144,6 +208,7 @@ class Term_Project extends Scene_Component
       case 'purple':  return Color.of(0.5, 0, 0.5, opacity);
       case 'black':   return Color.of(0, 0, 0, opacity);
       case 'white':   return Color.of(1, 1, 1, opacity);
+      case 'brown':   return Color.of(0.8, 0.52, 0.24, opacity);
 
       default:      return Color.of(1, 1, 1, 1);
     }
@@ -156,19 +221,44 @@ class Term_Project extends Scene_Component
   **************/
   make_control_panel()
   { 
-    /* Obsolete
-    this.key_triggered_button( "Move up",         [ "i" ], () => { this.moveBird('up') } );
-    this.key_triggered_button( "Move down",       [ "k" ], () => { this.moveBird('down') } );
-    this.new_line();
-    */
+    this.key_triggered_button( "Jump",            [ "j" ], () => { 
+                                                                   switch (this.state)
+                                                                   {
+                                                                     case this.states.gameOver:
+                                                                      this.reset()
+                                                                      this.state = this.states.startScreen
+                                                                      break
 
-    this.key_triggered_button( "Jump",            [ "j" ], () => { this.play = true; this.moveBird('jump');  } );
-    this.new_line();
-    this.key_triggered_button( "Play / Pause",    [ "h" ], () => { this.playSound('PP'); this.play = !this.play;  } );
+                                                                     case this.states.startScreen:
+                                                                      this.state = this.states.play
+                                                                      this.moveBird('jump')
+                                                                      break;
+
+                                                                     case this.states.play:
+                                                                      this.moveBird('jump')
+                                                                   } 
+                                                                 } );
+//     this.new_line();
+//     this.key_triggered_button( "Pause",    [ "h" ], () => { this.playSound('PP'); switch (this.state)
+//                                                                    {
+//                                                                      case this.states.play:
+//                                                                       this.state = this.states.pause
+//                                                                       break
+
+//                                                                      case this.states.pause:
+//                                                                       this.state = this.states.play
+//                                                                       break;
+//                                                                    } 
+//                                                           } );
+//      Let's just avoid this for now because this is gonna require me to redo how the sky and ground scrolls
+//      Plus, I dont think its that necessary and the original game doesnt have it 
+
+    this.new_line()
+    this.key_triggered_button( "Switch Camera",   [ "c" ], () => { this.switchCamera() } );
     this.new_line()
     this.key_triggered_button( "Mute Music",      [ "m" ], () => { this.playSound('BG', undefined, 'mute') } );
     this.new_line()
-    this.key_triggered_button( "Reset",           [ "g" ], () => { this.playSound('PP'); this.moveBird('reset') } );
+    this.key_triggered_button( "Reset",           [ "g" ], () => { this.playSound('PP'); this.reset() } );
     this.new_line();
     this.key_triggered_button( "Show Boundaries", [ "b" ], () => { this.showBoundaries = !this.showBoundaries } );     // DELETE
 
@@ -209,13 +299,13 @@ class Term_Project extends Scene_Component
       case 'jump':
         var offset = 0.0005 * this.birdPositionHeight // Offset intended to make the jump less excessive as it approaches max height 
                                                       // and more excessive as it approaches -max height
-        this.birdSpeed += 0.35 - offset
+        this.birdSpeed += 0.3 - offset
         this.playSound("birdflap")
         break;
 
 
       case 'gravity':
-        if ( this.birdPositionHeight < this.maxHeight && this.birdPositionHeight > this.groundHeight + 2)
+        if ( this.birdPositionHeight < this.maxHeight && this.birdPositionHeight > this.groundLevel + 2)
         {
           var offset = 0                      // Meant to increase the acceleration(gravity) as bird approaches max height to make game feel more dynamic
           if (this.birdPositionHeight > -5)
@@ -233,18 +323,8 @@ class Term_Project extends Scene_Component
         }
 
         else
-          { this.moveBird('reset'); this.playSound('crashGround', 0.2); }
+          { this.endGame(); this.playSound('crashWater', 0.2); }
 
-        break;
-
-
-      case 'reset':
-        this.birdPosition = this.birdPositionOriginal
-        this.birdSpeed = 0.0
-        this.shapes.text.set_string("Game Over")
-        this.score = 0.0
-        this.movePipes('reset')
-        this.play = false
         break;
     }
   
@@ -266,7 +346,8 @@ class Term_Project extends Scene_Component
     this.pipes[this.pipes.length - 1].push(1.0/this.pipeSpeed);                               // Initial pipe's speed is 0
     this.pipes[this.pipes.length - 1].push(this.pipes[this.pipes.length - 1][0][0][3] + 5);   // Pipe's X coordinate
     this.pipes[this.pipes.length - 1].push(pipeHeight);                                       // Initial pipe's height
-    this.pipes[this.pipes.length - 1].push('bottom');                                         
+    this.pipes[this.pipes.length - 1].push('bottom'); 
+    this.pipes[this.pipes.length - 1].push(this.pipePositionBottom.times(Mat4.translation([0, 0, -(pipeHeight - 1.0)/2.0])));                                         
     
     // Top pipe
     this.pipes.push([]);
@@ -274,7 +355,8 @@ class Term_Project extends Scene_Component
     this.pipes[this.pipes.length - 1].push(1.0/this.pipeSpeed);                               // Initial pipe's speed is 0
     this.pipes[this.pipes.length - 1].push(this.pipes[this.pipes.length - 1][0][0][3] + 5);   // Pipe's X coordinate
     this.pipes[this.pipes.length - 1].push((this.maxHeight * 2 + extraHeight) - pipeHeight);  // Initial pipe's height
-    this.pipes[this.pipes.length - 1].push('top'); 
+    this.pipes[this.pipes.length - 1].push('top');
+    this.pipes[this.pipes.length - 1].push(this.pipePositionUpper.times(Mat4.translation([0, 0, ((this.maxHeight * 2 + extraHeight) - pipeHeight - 1.0)/2.0])));
   }
 
 
@@ -283,21 +365,6 @@ class Term_Project extends Scene_Component
   **********************************/
   movePipes(mode = 'normal')
   {
-    /*Old reset condition for fixed sized pipe array
-    if (mode == 'reset')
-    {
-      for(var i = 0; i < this.maxPipes; i++)
-      {
-        this.pipes[i][0] = this.pipePositionBottom
-        this.pipes[i][1] = 0                        // Initial pipe's speed is 0
-        this.pipes[i][2] = this.pipes[i][0][0][3]   // Pipe's X coordinate
-        this.pipes[i][3] = 1                        // Initial pipe's height
-        this.pipes[i][4] = 'bottom'                 // ALl pipes start at the bottom
-      }
-
-      return
-    }*/
-
     // new reset condition for dynamically sized pipe array
     if (mode=='reset') { 
       this.pipes = [];
@@ -309,9 +376,11 @@ class Term_Project extends Scene_Component
     if (this.pipes.length < 1) {
        this.addPipes();
     }
+
     if(Math.abs(this.distanceTraveled % (-60)) < 0.01) {
        this.addPipes();
     }
+
     // For each pipe..
     var i = 0;
     while(i < this.pipes.length)
@@ -320,37 +389,19 @@ class Term_Project extends Scene_Component
       // Move the pipes
       this.pipes[i][0] = this.pipes[i][0].times(Mat4.translation([this.pipes[i][1], 0, 0]));
       this.pipes[i][2] = this.pipes[i][0][0][3];  // Update pipe's X coordinate
+      this.pipes[i][5] = this.pipes[i][5].times(Mat4.translation([this.pipes[i][1], 0, 0]));
+
       // If the pipe goes out of boundary...
       if ( this.pipes[i][2] < -1 * this.maxWidth - 5)
       {
         this.pipes.splice(i, 1);
       }
-      /*old code for fixed pipe length
-        this.pipes[i][1] = pipeSpeed ; // Change its assigned speed
-        
-        var pipeHeight = this.getRandInteger(1, 20);
 
-        // Respawn the pipe randomizing it's location (top or bottom)
-        var chance = this.getRandInteger(0, 100);
-        if (chance < 30)
-        { // Also randomize how far away it respawns, and its height
-          this.pipes[i][0] = this.pipePositionUpper.times(Mat4.translation([6 * i, 0, 0])).times(Mat4.scale([1, 1, pipeHeight]));
-          this.pipes[i][3] = pipeHeight;
-          this.pipes[i][4] = 'top';
-        }    
-
-        else
-        {
-          this.pipes[i][0] = this.pipePositionBottom.times(Mat4.translation([6 * i, 0, 0])).times(Mat4.scale([1, 1, pipeHeight]));
-          this.pipes[i][3] = pipeHeight;
-          this.pipes[i][4] = 'bottom';
-        }    
-      }*/
       else {
         i += 1;
       }
-
     }
+
   }
 
 
@@ -380,17 +431,33 @@ class Term_Project extends Scene_Component
       }
     }
 
-    if (this.birdPositionHeight - 0.5 >= bottomPipeHeight && this.birdPositionHeight + 0.5 <= topPipeHeight )
-    { if (this.play) this.score++; }
+    if (this.birdPositionHeight - 1.0 >= bottomPipeHeight && this.birdPositionHeight + 0.5 <= topPipeHeight )
+    { if (this.state == this.states.play) this.score++; }
       
     else if (bottomPipeHeight != undefined && topPipeHeight != undefined)
     { 
-      this.moveBird('reset'); 
       this.playSound('crash', 0.15); 
+      this.collisionAnimationTime = 5
+      this.endGame() 
     }
 
   }
 
+  spawnRock()
+  {
+      let spawnSide = 1
+      if (Math.random() > 0.7)
+        spawnSide = -1
+      let y = this.groundLevel + this.getRandInteger(-2,1)
+      let z = this.getRandInteger(-90, -10) * spawnSide
+      let rotation = Mat4.rotation(this.getRandInteger(0, 7), [1,0,0])
+      let model_transform = Mat4.identity().times(Mat4.translation([0,y,z]))
+                                           .times(rotation)
+                                           .times(Mat4.translation([this.groundSize, 0, 0]))
+                                           .times(Mat4.scale([this.rockSize,this.rockSize,this.rockSize]))   
+      this.rocks.push(model_transform)
+      if (this.rocks.length == this.maxRocks) this.rocks.shift()  // free rocks
+  }
 
 
   /********
@@ -398,18 +465,161 @@ class Term_Project extends Scene_Component
   ********/
   display( graphics_state )
   { 
-    graphics_state.lights = this.lights;        // Use the lights stored in this.lights.
     const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
     const FPS = 1 / dt  // Frames per second
+    var sunScale = this.interpolateInt(t, this.backgroundSize/50, this.backgroundSize/10)
+    var sunLight = this.interpolateInt(t, sunScale * 10000 + 400000, sunScale * 100000)
+    graphics_state.lights = [
+                              new Light( Vec.of(0, this.maxHeight - 8, -this.backgroundSize + 1, 1), Color.of( 0.9921, 0.7216, 0.0745, 1 ), sunLight ),
+                              new Light( Vec.of(0, this.maxHeight - 8, this.backgroundSize + 1, 1), Color.of( 0.9921, 0.7216, 0.0745, 1 ), sunLight / 2 ) // Sun
+                            ];  
+    
+    console.log(sunLight)
+    // Camera Positions
+    if (this.currentCamera == this.cameraPositions.dynamic)
+    {
+      var dynamicX = this.interpolateInt(t, this.initialDynamicPosition[0], this.finalDynamicPosition[0])
+      var dynamicY = this.interpolateInt(t, this.initialDynamicPosition[1], this.finalDynamicPosition[1])
+      var dynamicZ = this.interpolateInt(t, this.initialDynamicPosition[2], this.finalDynamicPosition[2])
+      this.dynamic = Mat4.inverse(Mat4.look_at( Vec.of(dynamicX, dynamicY, dynamicZ ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ));
+      this.currentCamera = this.cameraPositions["dynamic"] = this.dynamic
+    }
+    
+    const desired_camera = Mat4.inverse(this.currentCamera)
+    graphics_state.camera_transform = desired_camera.map( (x,i) => Vec.from( graphics_state.camera_transform[i] ).mix( x, 4*dt ) );
+     
+    let cameraTextTransform = this.currentCamera.times(Mat4.translation([-this.maxWidth+6,-this.maxHeight+4,-18]))
+                                                  .times(Mat4.scale([0.5,0.5,0.5]))
+    this.shapes.text.set_string( this.cameraTextString ) 
+    this.shapes.text.draw(graphics_state, cameraTextTransform, this.materials.text_image);
+
+
+    // Draw Sky
+    let backWallModelTransform = Mat4.identity().times(Mat4.translation([0,0,-this.backgroundSize]))
+                                                .times(Mat4.scale([this.backgroundSize,this.backgroundSize/1.2,1]))
+
+    let rightWallModelTransform = Mat4.identity().times(Mat4.translation([this.backgroundSize,0,0]))
+                                                 .times(Mat4.scale([1,this.backgroundSize/1.2,this.backgroundSize]))
+                                                 .times(Mat4.rotation(-Math.PI / 2, Vec.of(0,1,0)))
+
+
+    this.shapes.square.draw(graphics_state, backWallModelTransform, this.materials.background)
+    this.shapes.square.draw(graphics_state, rightWallModelTransform, this.materials.background)
+
+    // Draw Forest
+    for(var i = -4; i < 4; i ++) {
+      let forestModelTransform = Mat4.identity().times(Mat4.translation([i * this.backgroundSize/4, -20, -this.backgroundSize + 1.0]))
+                                                .times(Mat4.scale([this.backgroundSize/8, this.backgroundSize/20 ,1]))
+      this.shapes.square.draw(graphics_state, forestModelTransform, this.materials.forest)
+    }
     
 
-    // Draw Score
-    var scoreString = "Score: " + this.score.toString()
-    if (this.play) this.shapes.text.set_string( scoreString );
-    this.shapes.text.draw(graphics_state, this.score_model_transform, this.materials.text_image);
+    // Draw Ground
+    let groundModelTransform = Mat4.identity().times(Mat4.translation([0,this.groundLevel,0]))
+                                              .times(Mat4.scale([this.groundSize,1,this.groundSize]))
+                                              .times(Mat4.rotation(Math.PI / 2, Vec.of(1,0,0)))
+
+    this.shapes.square.draw(graphics_state, groundModelTransform, this.materials.bumped_ocean)
+
+
+    // Draw Text 
+    let messageModelTransform = this.currentCamera.times(Mat4.translation([-7,3,-15]))
+
+    switch (this.currentCamera)
+    {
+      case this.cameraPositions.dynamic:
+      case this.cameraPositions.behind:
+        messageModelTransform = this.currentCamera.times(Mat4.translation([this.maxWidth-17,-this.maxHeight+6,-18]))
+                                                  .times(Mat4.scale([0.75,0.75,0.75]))
+        break
+    }
+
+    switch (this.state) 
+    {
+      case this.states.startScreen:
+        this.shapes.text.set_string( "Flappy Duck" )
+        this.shapes.text.draw(graphics_state, messageModelTransform, this.materials.text_image)
+        break
+      case this.states.gameOver:
+        this.shapes.text.set_string( "Game Over!" )
+        this.shapes.text.draw(graphics_state, messageModelTransform, this.materials.text_image)
+        break
+    }
+
+
+    // Score
+    let scoreModelTransfrom = this.currentCamera.times(Mat4.translation([-this.maxWidth+6,this.maxHeight-4,-18]))
+                                                  .times(Mat4.scale([0.75,0.75,0.75]))
+    // Dynamic Scoreboard
+    switch (this.currentCamera)
+    {
+      case this.cameraPositions.dynamic:
+      case this.cameraPositions.behind:
+        scoreModelTransfrom = this.currentCamera.times(Mat4.translation([this.maxWidth-16,-this.maxHeight+4,-18]))
+                                                  .times(Mat4.scale([0.75,0.75,0.75]))
+    }
+
+    this.shapes.text.set_string( "Score: " + this.score.toString() ) 
+    this.shapes.text.draw(graphics_state, scoreModelTransfrom, this.materials.text_image);
     
 
-    // Draw Bundaries - DELETE
+    // Contains elements to load just once such as music
+    if (this.onLoad)
+    {
+      this.playSound('BG', 0.2, 'play');
+      this.sounds['BG'].loop = true;
+      // this.playSound('oceanAmbient', 0.05, 'play');
+      // this.sounds['oceanAmbient'].loop = true;
+      this.onLoad = false
+    }
+
+
+    // Move and Draw Bird
+    this.birdPositionHeight = this.birdPosition[1][3] // Bird's Height
+    switch (this.state)
+    {
+      case this.states.gameOver:
+        if (this.collisionAnimationTime > 0) this.shapes.square.draw(graphics_state, this.birdPosition.times(Mat4.translation([-2,0,0])).times(Mat4.scale([2,2,2])).times(Mat4.rotation(Math.PI/2, Vec.of(0,1,0))), this.materials.collision)
+        this.collisionAnimationTime--
+        break
+
+      default:
+        if (this.state == this.states.play) this.moveBird('gravity')
+        this.shapes.bird.draw(graphics_state, this.birdPosition, this.materials.bird)
+        break
+    }
+    
+
+    // Move and Draw Pipes
+    if (this.state != this.states.startScreen) this.movePipes()
+    for(var i = 0; i < this.pipes.length; i++) {
+      this.shapes.mainPipe.draw(graphics_state, this.pipes[i][0], this.materials.pipe)
+      this.shapes.pipeTip.draw(graphics_state, this.pipes[i][5], this.materials.pipe)
+    }
+
+
+    // Check for collisions
+    if (this.state == this.states.play) this.checkCollision()
+
+
+    // Spawn new rock
+    if (this.rocks.length < this.maxRocks && this.getRandInteger(0,this.rockSpawnFrequency) == 10) this.spawnRock()
+
+    // Draw Rocks
+    for(var rock = 0; rock < this.rocks.length; rock++)
+    {
+      this.shapes.rock.draw(graphics_state, this.rocks[rock], this.materials.rock)
+      this.rocks[rock] = this.rocks[rock].times(Mat4.translation([-0.2/this.rockSize,0,0]))
+    }
+    
+
+    // Draw Sun
+    let sunTransform = Mat4.identity().times(Mat4.translation([0, this.backgroundSize/2.5, -this.backgroundSize + 1]))
+                                                .times(Mat4.scale([sunScale, sunScale, sunScale]))
+    this.shapes.square.draw(graphics_state, sunTransform, this.materials.sun)
+
+
+    // Draw Boundaries - DELETE
     if (this.showBoundaries)
     {
       this.shapes.axis.draw( graphics_state, Mat4.identity(), this.materials.phong.override( {color: this.basicColors('cyan', 0.5) }) );
@@ -427,106 +637,6 @@ class Term_Project extends Scene_Component
                                                                this.materials.phong.override( {color: this.basicColors('red', 0.5) }) );
     }
 
-    
-    // Contains elements to load just once such as music
-    if (this.onLoad)
-    {
-      this.playSound('BG', 0.1, 'play');
-      this.sounds['BG'].loop = true;
-      this.onLoad = false
-    }
-
-
-    // Move and Draw Bird
-    this.birdPositionHeight = this.birdPosition[1][3] // Bird's Height
-    if (this.play) this.moveBird('gravity')
-    this.shapes.closedCone.draw(graphics_state, this.birdPosition, this.materials.bird) 
-
-
-    // Move and Draw Pipes
-    if (this.play) this.movePipes()
-    for(var i = 0; i < this.pipes.length; i++)
-      this.shapes.cappedCylinder.draw(graphics_state, this.pipes[i][0], this.materials.pipe)
-
-
-    // Draw Ground
-    for(var i = 0; i < this.maxWidth * 4; i += 2) 
-    {
-      let model = this.groundModelTransform.times( Mat4.translation( [i + this.groundXTranslation, 0, 0] ) )
-                                           .times(Mat4.scale( [ this.groundSize, 1, this.groundSize ] ) )
-
-      /*if (this.getRandInteger(0, 100) <= 5)
-        this.shapes.cube.draw(graphics_state, model, this.materials.dirt)
-      else*/
-        this.shapes.cube.draw(graphics_state, model, this.materials.grass)
-    }
-    
-    // Simulate an infinite ground
-    if (this.play)
-      if (this.groundXTranslation < this.groundMaxXTranslation)
-        this.groundXTranslation = -this.groundSpeed
-      else
-        this.groundXTranslation -= this.groundSpeed
-    
-
-    // Check for collisions
-    this.checkCollision()
-
-
-    // Draw sky
-
-    if (this.play){
-      for ( var i = 0; i < 18; i+= 1)
-      {
-        let model_transform = Mat4.identity();
-        model_transform = model_transform.times(Mat4.translation([-270, 0, -7]))
-                                         .times(Mat4.translation([i*30, 0, 0]))
-                                         .times(Mat4.scale([15, 15, .0001]));
-        this.shapes.square.draw(graphics_state, model_transform, this.materials.sky1s);
-      }
-    }
-    else 
-    {
-      for ( var i = 0; i < 18; i+= 1)
-      {
-        let model_transform = Mat4.identity();
-        model_transform = model_transform.times(Mat4.translation([-270, 0, -7]))
-                                         .times(Mat4.translation([i*30, 0, 0]))
-                                         .times(Mat4.scale([15, 15, .0001]));
-        this.shapes.square.draw(graphics_state, model_transform, this.materials.sky1);
-      }
-    }
-    /*
-    for(var i = 0; i < this.maxWidth * 4; i += 2) {
-          let model = this.groundModelTransform.times( Mat4.translation( [i + this.groundXTranslation,10 , -50] ) )
-                                               .times(Mat4.scale( [ this.groundSize, this.groundSize, this.groundSize ] ) )
-          this.shapes.cube.draw(graphics_state, model, this.materials.sky3)
-        }
-
-
-        if (this.play)
-        {
-          totalSeconds += this.play;
-          var scrollSpeed = 100;
-    //        var numImages = Math.ceil(canvas.width / img.width) + 1;
-    var xpos = totalSeconds * scrollSpeed % 1358;
-
-        }
-    */
-
-
-
-
-    /* REFERENCE
-    // Setup Sun Light
-    let sunLight  = [ new Light ( Vec.of( 0,0,0,1 ), Color.of(sunColorRed, 0, sunColorBlue, 1), 10 ** sunScale) ]
-    graphics_state.lights = sunLight
-
-    this.shapes.sphere.draw(graphics_state, planet, this.materials.planet.override( {color: Color.of(0.2, 1, 0.5, 1), specularity: 1, diffusivity: 0.2, gouraud: 1} ))
-
-    this.initial_camera_location = Mat4.look_at( Vec.of( 0,10,20 ), Vec.of( 0,0,0 ), Vec.of( 0,1,0 ) ).map( (x,i) => Vec.from( graphics_state.camera_transform[i] ).mix( x, 0.1 ) )
-    */
-
   }
 
 
@@ -539,6 +649,17 @@ class Term_Project extends Scene_Component
   getRandInteger(min, max) 
   { return Math.floor(Math.random() * (max - min + 1) ) + min; }
 
+
+  /* Interpolates between two values
+     Interval - Changes the duration between initial and final
+     Strength - Affects the difference between final and initial. High number will result in the average between the two.
+     verticalOffset - Increases initial and final by the same amount */
+  interpolateInt(time, initial, final, interval = 5, strength = 2, verticalOffset = 0.5)
+  {
+    var interpolationFunction = -(Math.cos(Math.PI * time / interval)) / strength + verticalOffset;
+    return initial + interpolationFunction * (final - initial)
+  }
+  
 
   // Plays the specified sound
   playSound(name, volume = 1, mode = 'play')
@@ -592,6 +713,79 @@ class Texture_Scroll_X extends Phong_Shader
           if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
           else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
           gl_FragColor.xyz += phong_model_lights( N );                     // Compute the final color with contributions from lights.
+        }`;
+    }
+}
+
+class Scroll_X extends Phong_Shader
+{ fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
+    {
+      return `
+        uniform sampler2D texture;
+        void main()
+        { if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.
+          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.            
+            return;
+          }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
+                                            // Phong shading is not to be confused with the Phong Reflection Model.
+          
+          float vx = 0.05 * animation_time;  // !!!This changes the speed!!!
+
+          mat4 translation = mat4(1.0,0.0,0.0,0.0,    //column 1
+                                  0.0,1.0,0.0,0.0,    //column 2
+                                  0.0,0.0,1.0,0.0,    //column 3
+                                   vx,0.0,0.0,1.0 );  //column 4
+          vec4 coord = translation * vec4(f_tex_coord,0.0,1.0);
+          vec2 coordinates;  
+        
+//           if (animation_time > 100.0 )      // After time limit, reset coordinates for better precision
+//           {    
+//             coordinates = vec2(mod(coord[0],1.000001),coord[1]);
+//           } 
+//           else 
+//           {
+//               coordinates = coord.xy;
+//           }
+
+          coordinates = coord.xy;
+
+          vec4 tex_color = texture2D( texture, coordinates );                         // Sample the texture image in the correct place.
+                                                                                      // Compute an initial (ambient) color:
+          if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
+          else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
+          gl_FragColor.xyz += phong_model_lights( N );                     // Compute the final color with contributions from lights.
+        }`;
+    }
+}
+
+
+
+class Scroll_X_Bump extends Bump_Shader
+{ fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
+    {
+      return `
+        uniform sampler2D texture;
+        void main()
+        { if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.
+          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.            
+            return;
+          }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
+                                            // Phong shading is not to be confused with the Phong Reflection Model.
+          float vx = 0.05 * animation_time;  // !!!This changes the speed!!!
+
+          mat4 translation = mat4(1.0,0.0,0.0,0.0,    //column 1
+                                  0.0,1.0,0.0,0.0,    //column 2
+                                  0.0,0.0,1.0,0.0,    //column 3
+                                   vx,0.0,0.0,1.0 );  //column 4
+          vec4 coord = translation * vec4(f_tex_coord,0.0,1.0);
+          vec2 coordinates;  
+          coordinates = coord.xy;
+
+          vec4 tex_color = texture2D( texture, coordinates );                         // Sample the texture image in the correct place.
+                                                                                      // Compute an initial (ambient) color:
+          vec3 newN = normalize(texture2D( texture2, coordinates ).xyz - 0.5 * vec3(1, 1, 1));                                                             
+          gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz) * ambient, shapeColor.w * tex_color.w );
+          gl_FragColor.xyz = 0.4 * gl_FragColor.xyz + phong_model_lights( newN.xyz, gl_FragColor );                     // Compute the final color with contributions from lights.
         }`;
     }
 }
