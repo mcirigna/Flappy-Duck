@@ -477,7 +477,7 @@ class Term_Project extends Scene_Component
     let rotation = Mat4.rotation(-Math.PI / 2, Vec.of(1,0,0))
     let boatModelTransform = Mat4.identity().times(Mat4.translation([0,y,z]))
                                             .times(rotation)
-                                            .times(Mat4.translation([this.groundSize, 0, 0]))
+                                            .times(Mat4.translation([-this.groundSize, 0, 0]))
                                             .times(Mat4.scale([this.boatSize,this.boatSize,this.boatSize])) 
     this.boats.push(boatModelTransform)
     if (this.boats.length >= this.maxBoats) this.boats.shift() // free boats
@@ -650,7 +650,7 @@ class Term_Project extends Scene_Component
     for(var boat = 0; boat < this.boats.length; boat++)
     {
       this.shapes.boat.draw(graphics_state, this.boats[boat], this.materials.boat)
-      this.boats[boat] = this.boats[boat].times(Mat4.translation([-0.2/this.boatSize,0,0]))
+      this.boats[boat] = this.boats[boat].times(Mat4.translation([+0.4/this.boatSize,0,0]))
     }
 
 
