@@ -34,6 +34,7 @@ class Term_Project extends Scene_Component
                       text:           new Text_Line(24),
                       bird:           new Shape_From_File("/assets/bird.obj"),
                       rock:          new Shape_From_File("/assets/rock.obj"),
+                      boat:           new Shape_From_File("/assets/boat.obj"),
                       mainPipe:       new Main_Pipe(30, 30),
                       pipeTip:        new Pipe_Tip(30, 30)
                    }  
@@ -47,6 +48,7 @@ class Term_Project extends Scene_Component
                       bird: context.get_instance( Phong_Shader ).material( this.basicColors('yellow') ),
                       collision: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/collision.png")} ),
                       rock: context.get_instance( Phong_Shader ).material( Color.of(0.50196, 0.517647, 0.52941, 0.8) ),
+                      boat: context.get_instance( Phong_Shader ).material( this.basicColors('gray', 0.9) ),
                       pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') ),
                       background: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/seamlessSky.jpg")} ),
                       grass: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/grass.jpg")} ),
