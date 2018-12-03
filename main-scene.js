@@ -346,7 +346,7 @@ class Term_Project extends Scene_Component
     this.pipes[this.pipes.length - 1].push(this.pipes[this.pipes.length - 1][0][0][3] + 5);   // Pipe's X coordinate
     this.pipes[this.pipes.length - 1].push(pipeHeight);                                       // Initial pipe's height
     this.pipes[this.pipes.length - 1].push('bottom'); 
-    this.pipes[this.pipes.length - 1].push(this.pipePositionBottom.times(Mat4.translation([0, 0, -(pipeHeight - 1.0)/2.0])));                                         
+    this.pipes[this.pipes.length - 1].push(this.pipePositionBottom.times(Mat4.translation([0, 0, -(pipeHeight + 1.0)/2.0])));                                         
     
     // Top pipe
     this.pipes.push([]);
