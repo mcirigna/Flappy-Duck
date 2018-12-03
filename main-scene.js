@@ -36,6 +36,7 @@ class Term_Project extends Scene_Component
                       cloud:          new Shape_From_File("/assets/cloud.obj"),
                       rock1:          new Shape_From_File("/assets/rock1.obj"),
                       rock2:          new Shape_From_File("/assets/rock2.obj"),
+                      boat:           new Shape_From_File("/assets/boat.obj"),
                       mainPipe:       new Main_Pipe(30, 30),
                       pipeTip:        new Pipe_Tip(30, 30)
                    }  
@@ -50,6 +51,7 @@ class Term_Project extends Scene_Component
                       collision: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/collision.png")} ),
                       cloud: context.get_instance( Phong_Shader ).material( this.basicColors('white', 0.5), {ambient: 1, texture: context.get_instance( "assets/sky2.png")} ),
                       rock: context.get_instance( Phong_Shader ).material( this.basicColors('brown', 0.9) ),
+                      boat: context.get_instance( Phong_Shader ).material( this.basicColors('gray', 0.9) ),
                       pipe: context.get_instance( Phong_Shader ).material( this.basicColors('green') ),
                       background: context.get_instance( Scroll_X ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance("assets/seamlessSky.jpg")} ),
                       dirt: context.get_instance( Phong_Shader ).material( Color.of( 0,0,0,1 ), {ambient: 1, texture: context.get_instance( "assets/dirt.png")} ),
@@ -579,7 +581,6 @@ class Term_Project extends Scene_Component
 
     // Spawn new rock
     if (this.state == this.states.play && this.rocks.length < this.maxRocks && this.getRandInteger(0,this.rockSpawnFrequency) == 10) this.spawnRock()
-
     // Draw Rocks
     for(var rock = 0; rock < this.rocks.length; rock++)
     {
