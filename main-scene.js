@@ -71,6 +71,7 @@ class Term_Project extends Scene_Component
                     crashWater: new Audio('assets/crashWater.wav'),
                     point: new Audio('assets/point.wav'),
                     oceanAmbient: new Audio('assets/ocean.wav'),
+                    quack: new Audio('assets/quack.wav'),
                     PP: new Audio('assets/pp.wav')
                   };
      
@@ -266,6 +267,7 @@ class Term_Project extends Scene_Component
 //      Let's just avoid this for now because this is gonna require me to redo how the sky and ground scrolls
 //      Plus, I dont think its that necessary and the original game doesnt have it 
 
+    this.key_triggered_button( "Quack",           [ "q" ], () => { this.playSound('quack') } );
     this.new_line()
     this.key_triggered_button( "Switch Camera",   [ "c" ], () => { this.switchCamera() } );
     this.new_line()
@@ -336,7 +338,7 @@ class Term_Project extends Scene_Component
         }
 
         else
-          { this.endGame(); this.playSound('crashWater', 0.2); }
+          { this.endGame(); this.playSound('crashWater'); }
 
         break;
     }
