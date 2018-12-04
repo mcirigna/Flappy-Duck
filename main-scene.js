@@ -490,14 +490,14 @@ class Term_Project extends Scene_Component
 
   spawnForest()
   { 
-    let count = 50
+    let count = 40
     this.forests.splice(0, this.forests.length)
     this.sideForests.splice(0, this.forests.length)
     for(var i = 0; i < count; i++)
     {
       let forestModelTransform = Mat4.identity().times(Mat4.translation([-this.backgroundSize/2, this.groundLevel/2, -this.groundSize]))
                                                 .times(Mat4.scale([this.forestSize, this.forestSize/2.5 ,1]))
-                                                .times(Mat4.translation([i,0,0]))
+                                                .times(Mat4.translation([i+10,0,0]))
 
       let model = Mat4.identity().times(Mat4.rotation(-Math.PI / 2, Vec.of(0,1,0))).times(Mat4.translation([-this.backgroundSize/2, this.groundLevel/2, -this.groundSize]))
                                                 .times(Mat4.scale([this.forestSize, this.forestSize/2.5 ,1]))
@@ -572,10 +572,9 @@ class Term_Project extends Scene_Component
                                               .times(Mat4.rotation(Math.PI / 2, Vec.of(1,0,0)))
 
     this.shapes.square.draw(graphics_state, groundModelTransform, this.materials.bumped_ocean)
-    this.shapes.square.draw(graphics_state, groundModelTransform.times(Mat4.translation([1,0,0])), this.materials.bumped_ocean)
     this.shapes.square.draw(graphics_state, groundModelTransform.times(Mat4.translation([2,0,0])), this.materials.bumped_ocean)
-    this.shapes.square.draw(graphics_state, groundModelTransform.times(Mat4.translation([3,0,0])), this.materials.bumped_ocean)
     this.shapes.square.draw(graphics_state, groundModelTransform.times(Mat4.translation([4,0,0])), this.materials.bumped_ocean)
+    
     // Draw Text 
     let messageModelTransform = this.currentCamera.times(Mat4.translation([-7,3,-15]))
 
