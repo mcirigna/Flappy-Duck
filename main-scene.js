@@ -102,7 +102,7 @@ class Term_Project extends Scene_Component
     // Forest
     this.forests = []
     this.sideForests = []
-    this.forestSize = this.backgroundSize/32
+    this.forestSize = this.backgroundSize/24
     this.forestXTranslation = 0
     this.spawnForest()
 
@@ -495,7 +495,7 @@ class Term_Project extends Scene_Component
     this.sideForests.splice(0, this.forests.length)
     for(var i = 0; i < count; i++)
     {
-      let forestModelTransform = Mat4.identity().times(Mat4.translation([-this.backgroundSize/2, this.groundLevel/2, -this.groundSize]))
+      let forestModelTransform = Mat4.identity().times(Mat4.translation([-this.backgroundSize/1.5, this.groundLevel/2, -this.groundSize]))
                                                 .times(Mat4.scale([this.forestSize, this.forestSize/2.5 ,1]))
                                                 .times(Mat4.translation([i+10,0,0]))
 
@@ -558,12 +558,24 @@ class Term_Project extends Scene_Component
     // Draw Forest
     for(var i = 0; i < this.forests.length; i++) 
     {
-      let model = this.forests[i].times(Mat4.translation([this.forestXTranslation,0,0]))
+      let model = this.forests[i].times(Mat4.translation([-this.forestXTranslation + i,0,0]))
       this.shapes.square.draw(graphics_state, model, this.materials.forest)
     }
-
-    this.forestXTranslation -= 0.2/this.forestSize
-    if (this.forestXTranslation < -this.forestSize/16) this.forestXTranslation = -0.2/this.forestSize
+  
+//     console.log(this.forestXTranslation)
+    let forestSpeed = 0.2/this.forestSize
+//     let forestSpeed = 0.0128
+    let maxForestTranslation = this.forestSize
+    this.forestXTranslation += forestSpeed
+    if (this.forestXTranslation >= maxForestTranslation) 
+    {
+      console.log("FOREST")
+      console.log(maxForestTranslation)
+      console.log(this.forestXTranslation)
+      this.forestXTranslation = forestSpeed
+      console.log(this.forestXTranslation)
+    }
+   
     
 
     // Draw Ground
