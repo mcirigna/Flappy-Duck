@@ -490,7 +490,7 @@ class Term_Project extends Scene_Component
 
   spawnForest()
   { 
-    let count = 40
+    let count = 50
     this.forests.splice(0, this.forests.length)
     this.sideForests.splice(0, this.forests.length)
     for(var i = 0; i < count; i++)
@@ -561,20 +561,11 @@ class Term_Project extends Scene_Component
       let model = this.forests[i].times(Mat4.translation([-this.forestXTranslation + i,0,0]))
       this.shapes.square.draw(graphics_state, model, this.materials.forest)
     }
-  
-//     console.log(this.forestXTranslation)
-    let forestSpeed = 0.2/this.forestSize
-//     let forestSpeed = 0.0128
+
+    let forestSpeed = 0.05/this.forestSize
     let maxForestTranslation = this.forestSize
     this.forestXTranslation += forestSpeed
-    if (this.forestXTranslation >= maxForestTranslation) 
-    {
-      console.log("FOREST")
-      console.log(maxForestTranslation)
-      console.log(this.forestXTranslation)
-      this.forestXTranslation = forestSpeed
-      console.log(this.forestXTranslation)
-    }
+    if (this.forestXTranslation >= maxForestTranslation) { this.forestXTranslation = forestSpeed }
    
     
 
